@@ -21,11 +21,13 @@ namespace GoldPriceWatch
     /// </summary>
     public partial class MainWindow : Window
     {
+        private GoldModelView? _viewModel;
+        private Point _startPoint;
         public MainWindow(GoldModelView MainModel)
         {
             InitializeComponent();
-            DataContext = MainModel;
-            MainModel.Text = "unknown";
+            DataContext = _viewModel = MainModel;
+
         }
 
         Point _pressedPosition;
@@ -53,7 +55,12 @@ namespace GoldPriceWatch
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            _viewModel?.ExitApp();
+        }
+
+        private void MenuItem_Click_1(object sender, RoutedEventArgs e)
+        {
+            new GoldInvestmentWindow().Show();
         }
     }
 }

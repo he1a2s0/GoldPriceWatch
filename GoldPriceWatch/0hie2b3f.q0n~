@@ -23,11 +23,6 @@ namespace GoldPriceWatch
         /// </summary>
         public new static App Current => (App)Application.Current;
 
-        /// <summary>
-        /// 提供全局服务访问
-        /// </summary>
-        public IServiceProvider Services => _host.Services;
-
         public App()
         {
             InitializeComponent();

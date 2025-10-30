@@ -1,0 +1,39 @@
+﻿<UserControl x:Class="GoldPriceWatch.Components.AppNotification"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:GoldPriceWatch.Components"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             mc:Ignorable="d" 
+            d:DesignHeight="80" d:DesignWidth="300">
+    <Border Background="{Binding Background, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            BorderBrush="Orange"
+            BorderThickness="1"
+            CornerRadius="5"
+            Padding="12">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 内容 -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <!-- 标题 -->
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontWeight="Bold"
+                           FontSize="14"
+                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           Margin="0,0,0,4"/>
+
+                <!-- 消息 -->
+                <TextBlock Text="{Binding MessageText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontSize="12"
+                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+            <Button Grid.ColumnSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Height="25" Width="25" Command="hc:ControlCommands.CloseWindow" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" >X</Button>
+        </Grid>
+    </Border>
+</UserControl>

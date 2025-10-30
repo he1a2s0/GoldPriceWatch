@@ -1,0 +1,299 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace GoldPriceWatch.Model
+{
+    /// <summary>
+    /// 配置类，用于管理黄金投资的买入信息、警报阈值等。
+    /// 该类支持JSON序列化，便于从配置文件加载。
+    /// 可以扩展以支持更多警报类型或通知渠道。
+    /// </summary>
+    public class GoldInvestmentConfig
+    {
+        /// <summary>
+        /// 买入价格（每克或每盎司，取决于单位）。
+        /// </summary>
+        [Required]
+        [Range(0, double.MaxValue, ErrorMessage = "买入价格必须大于0。")]
+        [JsonPropertyName("purchasePrice")]
+        public decimal PurchasePrice { get; set; } = 0m;
+
+        /// <summary>
+        /// 总克数（或总盎司数）。
+        /// </summary>
+        [Required]
+        [Range(0, double.MaxValue, ErrorMessage = "总克数必须大于0。")]
+        [JsonPropertyName("totalGrams")]
+        public decimal TotalGrams { get; set; } = 0m;
+
+        /// <summary>
+        /// 价格单位（克或盎司）。
+        /// </summary>
+        [JsonPropertyName("unit")]
+        public GoldUnit Unit { get; set; } = GoldUnit.Gram;
+
+        /// <summary>
+        /// 货币类型（与GoldResult同步）。
+        /// </summary>
+        [JsonPropertyName("currency")]
+        public string Currency { get; set; } = "CNY";
+
+        /// <summary>
+        /// 目标卖出价格（可选，用于盈利提醒）。
+        /// </summary>
+        [Range(0, double.MaxValue, ErrorMessage = "目标卖出价格必须大于0。")]
+        [JsonPropertyName("targetSellPrice")]
+        public decimal? TargetSellPrice { get; set; }
+
+        /// <summary>
+        /// 止损价格（可选，用于强制卖出警报）。
+        /// </summary>
+        [Range(0, double.MaxValue, ErrorMessage = "止损价格必须大于0。")]
+        [JsonPropertyName("stopLossPrice")]
+        public decimal? StopLossPrice { get; set; }
+
+        /// <summary>
+        /// 降价报警阈值类型（百分比或金额）。
+        /// </summary>
+        [JsonPropertyName("dropAlertType")]
+        public AlertThresholdType DropAlertType { get; set; } = AlertThresholdType.Percentage;
+
+        /// <summary>
+        /// 降价报警阈值（百分比：正值表示下跌百分比；金额：正值表示下跌金额）。
+        /// </summary>
+        [Required]
+        [Range(0, double.MaxValue, ErrorMessage = "降价报警阈值必须大于0。")]
+        [JsonPropertyName("dropAlertThreshold")]
+        public decimal DropAlertThreshold { get; set; } = 5m; // 默认5%
+
+        /// <summary>
+        /// 涨价提醒阈值类型（百分比或金额）。
+        /// </summary>
+        [JsonPropertyName("riseAlertType")]
+        public AlertThresholdType RiseAlertType { get; set; } = AlertThresholdType.Percentage;
+
+        /// <summary>
+        /// 涨价提醒阈值（百分比：正值表示上涨百分比；金额：正值表示上涨金额）。
+        /// </summary>
+        [Required]
+        [Range(0, double.MaxValue, ErrorMessage = "涨价提醒阈值必须大于0。")]
+        [JsonPropertyName("riseAlertThreshold")]
+        public decimal RiseAlertThreshold { get; set; } = 5m; // 默认5%
+
+        /// <summary>
+        /// 波动率警报阈值（当日价格波动百分比超过此值时警报）。
+        /// </summary>
+        [Range(0, double.MaxValue, ErrorMessage = "波动率阈值必须大于0。")]
+        [JsonPropertyName("volatilityThreshold")]
+        public decimal? VolatilityThreshold { get; set; } = 2m; // 默认2%
+
+        /// <summary>
+        /// 是否启用每日结算价提醒。
+        /// </summary>
+        [JsonPropertyName("enableSettlementAlert")]
+        public bool EnableSettlementAlert { get; set; } = true;
+
+        /// <summary>
+        /// 通知渠道（例如：Console, Email, Push 等，可扩展为枚举或列表）。
+        /// </summary>
+        [JsonPropertyName("notificationChannels")]
+        public string[] NotificationChannels { get; set; } = { "Console" };
+
+        /// <summary>
+        /// 默认构造函数，初始化合理默认值。
+        /// </summary>
+        public GoldInvestmentConfig()
+        {
+            // 默认值已在上方属性中设置
+        }
+
+        /// <summary>
+        /// 检查是否触发降价报警。
+        /// </summary>
+        /// <param name="goldResult">当前黄金价格数据。</param>
+        /// <returns>是否触发报警，以及触发详情。</returns>
+        public (bool IsTriggered, string Message) CheckDropAlert(GoldResult goldResult)
+        {
+            var lossPercentage = goldResult.CalculateLossPercentage(PurchasePrice);
+            if (lossPercentage < 0) // 无效数据
+            {
+                return (false, "价格数据无效，无法计算降价。");
+            }
+
+            decimal thresholdValue;
+            if (DropAlertType == AlertThresholdType.Percentage)
+            {
+                thresholdValue = DropAlertThreshold;
+                if (lossPercentage >= thresholdValue)
+                {
+                    var lossAmount = (PurchasePrice - decimal.Parse(goldResult.CurrentPrice ?? "0")) * TotalGrams;
+                    return (true, $"降价报警：当前亏损 {lossPercentage:F2}%（金额约 {lossAmount:F2} {Currency}），超过阈值 {thresholdValue}%");
+                }
+            }
+            else // Amount
+            {
+                thresholdValue = DropAlertThreshold / TotalGrams; // 转换为单价阈值
+                var currentPrice = decimal.Parse(goldResult.CurrentPrice ?? "0");
+                if ((PurchasePrice - currentPrice) >= thresholdValue)
+                {
+                    var lossPercentage = goldResult.CalculateLossPercentage(PurchasePrice);
+                    return (true, $"降价报警：当前亏损金额超过阈值 {DropAlertThreshold:F2} {Currency}（亏损率 {lossPercentage:F2}%）");
+                }
+            }
+
+            return (false, string.Empty);
+        }
+
+        /// <summary>
+        /// 检查是否触发涨价提醒。
+        /// </summary>
+        /// <param name="goldResult">当前黄金价格数据。</param>
+        /// <returns>是否触发提醒，以及提醒详情。</returns>
+        public (bool IsTriggered, string Message) CheckRiseAlert(GoldResult goldResult)
+        {
+            var changePercentage = goldResult.CalculatePriceChangePercentage();
+            if (changePercentage < 0) // 无效数据
+            {
+                return (false, "价格数据无效，无法计算涨幅。");
+            }
+
+            decimal thresholdValue;
+            if (RiseAlertType == AlertThresholdType.Percentage)
+            {
+                thresholdValue = RiseAlertThreshold;
+                if (changePercentage >= thresholdValue)
+                {
+                    var profitAmount = (decimal.Parse(goldResult.CurrentPrice ?? "0") - PurchasePrice) * TotalGrams;
+                    return (true, $"涨价提醒：当前涨幅 {changePercentage:F2}%（盈利约 {profitAmount:F2} {Currency}），超过阈值 {thresholdValue}%");
+                }
+            }
+            else // Amount
+            {
+                thresholdValue = RiseAlertThreshold / TotalGrams; // 转换为单价阈值
+                var currentPrice = decimal.Parse(goldResult.CurrentPrice ?? "0");
+                if ((currentPrice - PurchasePrice) >= thresholdValue)
+                {
+                    var changePercentage = goldResult.CalculatePriceChangePercentage();
+                    return (true, $"涨价提醒：当前盈利金额超过阈值 {RiseAlertThreshold:F2} {Currency}（涨幅 {changePercentage:F2}%）");
+                }
+            }
+
+            return (false, string.Empty);
+        }
+
+        /// <summary>
+        /// 检查是否触发波动率警报。
+        /// </summary>
+        /// <param name="goldResult">当前黄金价格数据。</param>
+        /// <returns>是否触发警报，以及警报详情。</returns>
+        public (bool IsTriggered, string Message) CheckVolatilityAlert(GoldResult goldResult)
+        {
+            if (!VolatilityThreshold.HasValue)
+            {
+                return (false, string.Empty);
+            }
+
+            var rangePercentage = goldResult.CalculatePriceRangePercentage();
+            if (rangePercentage < 0) // 无效数据
+            {
+                return (false, "价格数据无效，无法计算波动率。");
+            }
+
+            if (rangePercentage >= VolatilityThreshold.Value)
+            {
+                return (true, $"波动率警报：当日价格波动 {rangePercentage:F2}%，超过阈值 {VolatilityThreshold.Value}%");
+            }
+
+            return (false, string.Empty);
+        }
+
+        /// <summary>
+        /// 检查是否达到目标卖出价。
+        /// </summary>
+        /// <param name="goldResult">当前黄金价格数据。</param>
+        /// <returns>是否达到目标，以及详情。</returns>
+        public (bool IsReached, string Message) CheckTargetSell(GoldResult goldResult)
+        {
+            if (!TargetSellPrice.HasValue)
+            {
+                return (false, string.Empty);
+            }
+
+            var currentPrice = decimal.Parse(goldResult.CurrentPrice ?? "0");
+            if (currentPrice >= TargetSellPrice.Value)
+            {
+                var profitPercentage = ((currentPrice - PurchasePrice) / PurchasePrice) * 100;
+                var profitAmount = (currentPrice - PurchasePrice) * TotalGrams;
+                return (true, $"达到卖出目标：当前价 {currentPrice:F2} {Currency}，盈利 {profitPercentage:F2}%（金额 {profitAmount:F2} {Currency}）");
+            }
+
+            return (false, string.Empty);
+        }
+
+        /// <summary>
+        /// 检查是否触发止损。
+        /// </summary>
+        /// <param name="goldResult">当前黄金价格数据。</param>
+        /// <returns>是否触发止损，以及详情。</returns>
+        public (bool IsTriggered, string Message) CheckStopLoss(GoldResult goldResult)
+        {
+            if (!StopLossPrice.HasValue)
+            {
+                return (false, string.Empty);
+            }
+
+            var currentPrice = decimal.Parse(goldResult.CurrentPrice ?? "0");
+            if (currentPrice <= StopLossPrice.Value)
+            {
+                var lossPercentage = ((PurchasePrice - currentPrice) / PurchasePrice) * 100;
+                var lossAmount = (PurchasePrice - currentPrice) * TotalGrams;
+                return (true, $"止损警报：当前价 {currentPrice:F2} {Currency}，亏损 {lossPercentage:F2}%（金额 {lossAmount:F2} {Currency}）");
+            }
+
+            return (false, string.Empty);
+        }
+
+        /// <summary>
+        /// 获取当前总投资价值。
+        /// </summary>
+        /// <param name="goldResult">当前黄金价格数据。</param>
+        /// <returns>当前总价值。</returns>
+        public decimal GetCurrentTotalValue(GoldResult goldResult)
+        {
+            return decimal.Parse(goldResult.CurrentPrice ?? "0") * TotalGrams;
+        }
+
+        /// <summary>
+        /// 获取当前盈亏金额。
+        /// </summary>
+        /// <param name="goldResult">当前黄金价格数据。</param>
+        /// <returns>盈亏金额（正为盈利，负为亏损）。</returns>
+        public decimal GetCurrentProfitLoss(GoldResult goldResult)
+        {
+            var currentValue = GetCurrentTotalValue(goldResult);
+            var purchaseValue = PurchasePrice * TotalGrams;
+            return currentValue - purchaseValue;
+        }
+    }
+
+    /// <summary>
+    /// 黄金单位枚举。
+    /// </summary>
+    public enum GoldUnit
+    {
+        Gram,  // 克
+        Ounce  // 盎司
+    }
+
+    /// <summary>
+    /// 警报阈值类型枚举。
+    /// </summary>
+    public enum AlertThresholdType
+    {
+        Percentage,  // 百分比
+        Amount       // 金额
+    }
+}

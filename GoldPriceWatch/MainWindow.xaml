@@ -1,4 +1,5 @@
-﻿<Window x:Class="GoldPriceWatch.MainWindow"
+﻿<!-- MainWindow.xaml -->
+<Window x:Class="GoldPriceWatch.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,7 +9,7 @@
         xmlns:convert="clr-namespace:GoldPriceWatch.Convert"
         mc:Ignorable="d"
         Title="黄金价格监控" 
-        Height="60" Width="220"
+        Height="80" Width="300"
         WindowStyle="None"
         Background="Transparent"
         ResizeMode="NoResize"
@@ -19,64 +20,144 @@
         PreviewMouseLeftButtonUp="Window_PreviewMouseLeftButtonUp">
 
     <Window.Resources>
+        <!-- Converter for trend symbol (assuming BoolToStringConverter is defined in Convert namespace) -->
         <convert:BoolToStringConverter x:Key="PriceTrendSymbolConverter" />
 
+        <!-- Flashing Animation -->
+        <Storyboard x:Key="FlashingAnimation" RepeatBehavior="3x" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                             From="1.0" To="0.7" Duration="0:0:0.3"/>
+        </Storyboard>
+
+        <!-- Base Price Text Style -->
         <Style x:Key="PriceTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Opacity" Value="1.0"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Rise}" Value="True">
-                    <Setter Property="Foreground" Value="#FF4A4A"/>
-                    <!-- 更柔和的红色 -->
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Rise}" Value="False">
+                <!-- Rise: Green -->
+                <DataTrigger Binding="{Binding IsRise}" Value="True">
                     <Setter Property="Foreground" Value="#4CAF50"/>
-                    <!-- 更柔和的绿色 -->
                 </DataTrigger>
+                <!-- Drop: Red -->
+                <DataTrigger Binding="{Binding IsRise}" Value="False">
+                    <Setter Property="Foreground" Value="#F44336"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Info Text Style -->
+        <Style x:Key="InfoTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#757575"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Border Style with Glow for Alerts -->
+        <Style x:Key="AlertBorderStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsFlashing}" Value="True">
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="15" ShadowDepth="0" Opacity="0.8" Color="#FFD700"/>
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Alert-Specific TextBlock Styles for Flashing -->
+        <Style x:Key="RiseAlertTextStyle" TargetType="TextBlock" BasedOn="{StaticResource PriceTextStyle}">
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsRiseAlert}" Value="True"/>
+                        <Condition Binding="{Binding IsFlashing}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="#8BC34A"/>
+                    <MultiDataTrigger.EnterActions>
+                        <BeginStoryboard Storyboard="{StaticResource FlashingAnimation}"/>
+                    </MultiDataTrigger.EnterActions>
+                    <MultiDataTrigger.ExitActions>
+                        <StopStoryboard/>
+                    </MultiDataTrigger.ExitActions>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DropAlertTextStyle" TargetType="TextBlock" BasedOn="{StaticResource PriceTextStyle}">
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsDropAlert}" Value="True"/>
+                        <Condition Binding="{Binding IsFlashing}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="#EF5350"/>
+                    <MultiDataTrigger.EnterActions>
+                        <BeginStoryboard Storyboard="{StaticResource FlashingAnimation}"/>
+                    </MultiDataTrigger.EnterActions>
+                    <MultiDataTrigger.ExitActions>
+                        <StopStoryboard/>
+                    </MultiDataTrigger.ExitActions>
+                </MultiDataTrigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <!-- 使用阴影效果增强视觉层次 -->
-    <Border CornerRadius="10" 
-            Padding="10,5"
-            BorderThickness="1">
+    <!-- Enhanced layout for more info while keeping compact -->
+    <Border Style="{StaticResource AlertBorderStyle}"
+            BorderBrush="#E0E0E0">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="10" 
-                              ShadowDepth="2" 
-                              Opacity="0.6" 
-                              Color="Black"/>
+            <DropShadowEffect BlurRadius="12" ShadowDepth="3" Opacity="0.5" Color="Black"/>
         </Border.Effect>
 
-        <StackPanel Orientation="Horizontal" 
-                    HorizontalAlignment="Center" 
-                    VerticalAlignment="Center"
-                    TextElement.FontFamily="Segoe UI">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <!-- 当前价格 -->
-            <TextBlock Text="{Binding Text, StringFormat='{}{0:C}'}" 
-                       Style="{StaticResource PriceTextStyle}"
-                       MinWidth="80"
-                       TextAlignment="Right"/>
+            <!-- Top Row: Current Price & Trend -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
+                <TextBlock Text="{Binding CurrentPriceText}" 
+                           Style="{StaticResource PriceTextStyle}"
+                           MinWidth="60"
+                           TextAlignment="Right"/>
+                <TextBlock Style="{StaticResource PriceTextStyle}" Margin="4,0">
+                    <Run Text="{Binding IsRise, Converter={StaticResource PriceTrendSymbolConverter}, ConverterParameter='↑|↓'}"/>
+                    <Run Text="{Binding PriceRangePercentage}"/>
+                </TextBlock>
+            </StackPanel>
 
-            <!-- 价格变动信息 -->
-            <TextBlock Style="{StaticResource PriceTextStyle}" 
-                       Margin="8,0,0,0">
-                <Run Text="{Binding Rise, Converter={StaticResource PriceTrendSymbolConverter}, ConverterParameter='↑|↓'}"/>
-                <Run Text="{Binding PriceRangePercentage}"/>
-            </TextBlock>
+            <!-- Middle Row: Profit/Loss -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
+                <TextBlock Text="{Binding PurchasePriceText}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding ProfitLossAmountText}" 
+                           Style="{StaticResource RiseAlertTextStyle}"
+                           MinWidth="50"
+                           TextAlignment="Right"/>
+                <TextBlock Text="{Binding ProfitLossPercentageText}" 
+                           Style="{StaticResource DropAlertTextStyle}"
+                           Margin="4,0,0,0"/>
+            </StackPanel>
 
-            <!-- 可选：添加一个刷新时间 -->
-            <TextBlock Text="{Binding LastUpdated, StringFormat='(更新: {0:HH:mm})'}" 
-                       Foreground="#AAAAAA"
-                       FontSize="10"
-                       Margin="8,0,0,0"
-                       VerticalAlignment="Bottom"/>
-        </StackPanel>
+            <!-- Bottom Row: Totals & Update Time -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding CurrentTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding PurchaseTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding LastUpdated, StringFormat='(更新: {0:HH:mm:ss})'}" 
+                           Style="{StaticResource InfoTextStyle}"/>
+            </StackPanel>
+        </Grid>
+
         <Border.ContextMenu>
             <ContextMenu>
-                <MenuItem Header="设置对比价格"/>
+                <MenuItem Header="配置" Click="MenuItem_Click_1"/>
                 <MenuItem Header="退出" Click="MenuItem_Click"/>
             </ContextMenu>
         </Border.ContextMenu>
