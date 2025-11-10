@@ -5,3 +5,5 @@
 Real-Time monitoring software for gold price.
 
 ![GoldPriceWatch](/Blog/Demo.png)
+
+友情链接 [莫欺客鞋帽优选](https://www.moqistar.com)
