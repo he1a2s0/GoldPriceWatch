@@ -60,7 +60,7 @@
         <Style x:Key="AlertBorderStyle" TargetType="Border">
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsFlashing}" Value="True">
                     <Setter Property="Effect">
