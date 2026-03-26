@@ -1,4 +1,5 @@
 ﻿using GoldPriceWatch.Enums;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -38,6 +39,8 @@ namespace GoldPriceWatch.Model
         private decimal? _volatilityThreshold = 2m;
         private bool _enableSettlementAlert = true;
         private string[] _notificationChannels = { "Console" };
+        private double? _mainWindowLeft;
+        private double? _mainWindowTop;
 
         /// <summary>
         /// 无参构造函数，用于JSON反序列化。
@@ -321,6 +324,40 @@ namespace GoldPriceWatch.Model
         }
 
         /// <summary>
+        /// 主窗口左侧位置（用于恢复窗口位置）。
+        /// </summary>
+        [JsonPropertyName("mainWindowLeft")]
+        public double? MainWindowLeft
+        {
+            get => _mainWindowLeft;
+            set
+            {
+                if (_mainWindowLeft != value)
+                {
+                    _mainWindowLeft = value;
+                    if (!_isLoading) SaveToFile();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 主窗口顶部位置（用于恢复窗口位置）。
+        /// </summary>
+        [JsonPropertyName("mainWindowTop")]
+        public double? MainWindowTop
+        {
+            get => _mainWindowTop;
+            set
+            {
+                if (_mainWindowTop != value)
+                {
+                    _mainWindowTop = value;
+                    if (!_isLoading) SaveToFile();
+                }
+            }
+        }
+
+        /// <summary>
         /// 从JSON文件加载配置（如果存在）。
         /// </summary>
         private void LoadFromFile()
@@ -356,7 +393,7 @@ namespace GoldPriceWatch.Model
                 }
                 if (root.TryGetProperty("unit", out prop))
                 {
-                    Unit = Enum.IsDefined(typeof(GoldUnit), prop.GetInt32()) ? (GoldUnit)prop.GetInt32() : GoldUnit.Gram;
+                    Unit = TryParseEnum(prop, GoldUnit.Gram);
                 }
                 if (root.TryGetProperty("currency", out prop))
                 {
@@ -372,7 +409,7 @@ namespace GoldPriceWatch.Model
                 }
                 if (root.TryGetProperty("dropAlertType", out prop))
                 {
-                    DropAlertType = Enum.IsDefined(typeof(AlertThresholdType), prop.GetInt32()) ? (AlertThresholdType)prop.GetInt32() : AlertThresholdType.Percentage;
+                    DropAlertType = TryParseEnum(prop, AlertThresholdType.Percentage);
                 }
                 if (root.TryGetProperty("dropAlertThreshold", out prop))
                 {
@@ -380,7 +417,7 @@ namespace GoldPriceWatch.Model
                 }
                 if (root.TryGetProperty("riseAlertType", out prop))
                 {
-                    RiseAlertType = Enum.IsDefined(typeof(AlertThresholdType), prop.GetInt32()) ? (AlertThresholdType)prop.GetInt32() : AlertThresholdType.Percentage;
+                    RiseAlertType = TryParseEnum(prop, AlertThresholdType.Percentage);
                 }
                 if (root.TryGetProperty("riseAlertThreshold", out prop))
                 {
@@ -398,6 +435,14 @@ namespace GoldPriceWatch.Model
                 {
                     NotificationChannels = prop.EnumerateArray().Select(p => p.GetString() ?? string.Empty).Where(s => !string.IsNullOrEmpty(s)).ToArray();
                 }
+                if (root.TryGetProperty("mainWindowLeft", out prop))
+                {
+                    MainWindowLeft = prop.ValueKind == JsonValueKind.Null ? null : prop.GetDouble();
+                }
+                if (root.TryGetProperty("mainWindowTop", out prop))
+                {
+                    MainWindowTop = prop.ValueKind == JsonValueKind.Null ? null : prop.GetDouble();
+                }
             }
             catch (Exception ex)
             {
@@ -408,6 +453,14 @@ namespace GoldPriceWatch.Model
             {
                 _isLoading = false;
             }
+        }
+
+        private TEnum TryParseEnum<TEnum>(JsonElement jsonElement, TEnum defaultValue) where TEnum : struct, Enum
+        {
+            if (Enum.TryParse(jsonElement.GetRawText(), true, out TEnum unit))
+                return unit;
+
+            return defaultValue;
         }
 
         /// <summary>

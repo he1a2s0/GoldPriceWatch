@@ -1,8 +1,8 @@
-﻿
-using GoldPriceWatch.Core;
+﻿using GoldPriceWatch.Core;
 using GoldPriceWatch.Model;
 using GoldPriceWatch.ModelView;
 using MediatR;
+using System.ComponentModel;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,21 +21,103 @@ namespace GoldPriceWatch
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const double MinimumVisibleWidth = 60d;
+        private const double MinimumVisibleHeight = 40d;
+
+        private readonly GoldInvestmentConfig _config;
         private GoldModelView? _viewModel;
         private Point _startPoint;
-        public MainWindow(GoldModelView MainModel)
+
+        public MainWindow(GoldModelView MainModel, GoldInvestmentConfig config)
         {
             InitializeComponent();
             DataContext = _viewModel = MainModel;
+            _config = config;
 
+            Loaded += MainWindow_Loaded;
+            Closing += MainWindow_Closing;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            RestoreWindowPosition();
+        }
+
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            SaveWindowPosition();
+        }
+
+        private void RestoreWindowPosition()
+        {
+            if (!_config.MainWindowLeft.HasValue || !_config.MainWindowTop.HasValue)
+            {
+                return;
+            }
+
+            var position = GetSafeWindowPosition(_config.MainWindowLeft.Value, _config.MainWindowTop.Value);
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = position.X;
+            Top = position.Y;
+        }
+
+        private void SaveWindowPosition()
+        {
+            if (WindowState != WindowState.Normal)
+            {
+                return;
+            }
+
+            _config.MainWindowLeft = Left;
+            _config.MainWindowTop = Top;
+        }
+
+        private Point GetSafeWindowPosition(double left, double top)
+        {
+            var width = ActualWidth;
+            if (double.IsNaN(width) || width <= 0)
+            {
+                width = Width;
+            }
+            if (double.IsNaN(width) || width <= 0)
+            {
+                width = MinimumVisibleWidth;
+            }
+
+            var height = ActualHeight;
+            if (double.IsNaN(height) || height <= 0)
+            {
+                height = Height;
+            }
+            if (double.IsNaN(height) || height <= 0)
+            {
+                height = MinimumVisibleHeight;
+            }
+
+            var virtualLeft = SystemParameters.VirtualScreenLeft;
+            var virtualTop = SystemParameters.VirtualScreenTop;
+            var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
+            var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
+
+            var minLeft = virtualLeft - Math.Max(0d, width - MinimumVisibleWidth);
+            var maxLeft = virtualRight - MinimumVisibleWidth;
+            var minTop = virtualTop - Math.Max(0d, height - MinimumVisibleHeight);
+            var maxTop = virtualBottom - MinimumVisibleHeight;
+
+            var safeLeft = Math.Min(Math.Max(left, minLeft), maxLeft);
+            var safeTop = Math.Min(Math.Max(top, minTop), maxTop);
+
+            return new Point(safeLeft, safeTop);
         }
 
         Point _pressedPosition;
         bool _isDragMoved = false;
+
         void Window_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             _pressedPosition = e.GetPosition(this);
         }
+
         void Window_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
             if (Mouse.LeftButton == MouseButtonState.Pressed && _pressedPosition != e.GetPosition(this))
@@ -44,11 +126,13 @@ namespace GoldPriceWatch
                 DragMove();
             }
         }
+
         void Window_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (_isDragMoved)
             {
                 _isDragMoved = false;
+                SaveWindowPosition();
                 e.Handled = true;
             }
         }
