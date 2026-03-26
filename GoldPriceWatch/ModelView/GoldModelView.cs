@@ -84,7 +84,8 @@ namespace GoldPriceWatch.ModelView
             LastUpdated = DateTime.Now;
 
             // Update basic price info
-            CurrentPriceText = $"￥{notification.CurrentPrice}";
+            //CurrentPriceText = $"￥{notification.CurrentPrice}";
+            CurrentPriceText = $"{notification.CurrentPrice}";
             PurchasePriceText = $"买入: ￥{_config.PurchasePrice:F2}({_config.TotalGrams}{_config.Unit.GetDescription()})";
 
             // Compute profit/loss

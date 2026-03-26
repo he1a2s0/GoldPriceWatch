@@ -13,8 +13,10 @@
         WindowStyle="None"
         Background="Transparent"
         ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
         AllowsTransparency="True"
         Topmost="True"
+        ShowInTaskbar="False"
         PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown"
         PreviewMouseMove="Window_PreviewMouseMove"
         PreviewMouseLeftButtonUp="Window_PreviewMouseLeftButtonUp">
@@ -111,10 +113,6 @@
     <!-- Enhanced layout for more info while keeping compact -->
     <Border Style="{StaticResource AlertBorderStyle}"
             BorderBrush="#E0E0E0">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="12" ShadowDepth="3" Opacity="0.5" Color="Black"/>
-        </Border.Effect>
-
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -135,7 +133,8 @@
             </StackPanel>
 
             <!-- Middle Row: Profit/Loss -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4"
+                        Visibility="Collapsed">
                 <TextBlock Text="{Binding PurchasePriceText}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
                 <TextBlock Text="{Binding ProfitLossAmountText}" 
                            Style="{StaticResource RiseAlertTextStyle}"
@@ -146,8 +145,9 @@
                            Margin="4,0,0,0"/>
             </StackPanel>
 
-            <!-- Bottom Row: Totals & Update Time -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+             <!--Bottom Row: Totals & Update Time--> 
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center"
+                        Visibility="Collapsed">
                 <TextBlock Text="{Binding CurrentTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
                 <TextBlock Text="{Binding PurchaseTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
                 <TextBlock Text="{Binding LastUpdated, StringFormat='(更新: {0:HH:mm:ss})'}" 
