@@ -95,7 +95,7 @@ namespace GoldPriceWatch.ModelView
             // Update basic price info
             //CurrentPriceText = $"￥{notification.CurrentPrice}";
             CurrentPriceText = $"{notification.CurrentPrice}";
-            PurchasePriceText = $"买入: ￥{_config.PurchasePrice:F2}({_config.TotalGrams}{_config.Unit.GetDescription()})";
+            PurchasePriceText = $"B: {_config.PurchasePrice:F0}({_config.TotalGrams:F1}{_config.Unit.GetDescription()})";
 
             // Compute profit/loss
             var profitLoss = _config.GetCurrentProfitLoss(notification);

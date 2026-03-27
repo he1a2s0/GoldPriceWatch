@@ -40,7 +40,7 @@
 					 From="1.0" To="0.65" Duration="0:0:0.45"/>
                 </Storyboard>
             </Style.Resources>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Opacity" Value="1.0"/>
@@ -92,8 +92,8 @@
 
         <!-- Border Style with Glow for Alerts -->
         <Style x:Key="AlertBorderStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="5,2"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsFlashing}" Value="True">
@@ -155,23 +155,23 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-
+            
             <!-- Top Row: Current Price & Trend -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,0">
                 <TextBlock Text="{Binding CurrentPriceText}" 
                            Style="{StaticResource PriceTextStyle}"
-                           MinWidth="60"
                            TextAlignment="Right"/>
                 <TextBlock Style="{StaticResource PriceTextStyle}" Margin="4,0">
                     <Run Text="{Binding IsRise, Converter={StaticResource PriceTrendSymbolConverter}, ConverterParameter='↑|↓'}"/>
                     <Run Text="{Binding PriceRangePercentage}"/>
                 </TextBlock>
                 <TextBlock Text="{Binding FetchStatusText}" Style="{StaticResource FetchStateTextStyle}" Margin="8,0,0,0"/>
+                <TextBlock Text="{Binding LastUpdated, StringFormat='({0:HH:mm:ss})'}" 
+           Style="{StaticResource InfoTextStyle}"/>
             </StackPanel>
 
             <!-- Middle Row: Profit/Loss -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4"
-                        Visibility="Collapsed">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,0">
                 <TextBlock Text="{Binding PurchasePriceText}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
                 <TextBlock Text="{Binding ProfitLossAmountText}" 
                            Style="{StaticResource RiseAlertTextStyle}"
@@ -183,12 +183,10 @@
             </StackPanel>
 
              <!--Bottom Row: Totals & Update Time--> 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center"
-                        Visibility="Collapsed">
-                <TextBlock Text="{Binding CurrentTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Visibility="Collapsed">
+                <TextBlock Text="{Binding CurrentTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,4,0"/>
+                <TextBlock Text="/ " />
                 <TextBlock Text="{Binding PurchaseTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding LastUpdated, StringFormat='(更新: {0:HH:mm:ss})'}" 
-                           Style="{StaticResource InfoTextStyle}"/>
             </StackPanel>
         </Grid>
 

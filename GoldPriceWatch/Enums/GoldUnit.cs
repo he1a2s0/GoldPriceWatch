@@ -14,9 +14,9 @@ namespace GoldPriceWatch.Enums
     /// </summary>
     public enum GoldUnit
     {
-        [Description("克")]
+        [Description("g")]
         Gram,  // 克
-        [Description("盎司")]
+        [Description("oz")]
         Ounce  // 盎司
     }
 }
