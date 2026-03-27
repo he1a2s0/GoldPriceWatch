@@ -13,25 +13,23 @@ namespace GoldPriceWatch.Core
 {
     public class RequestCloud
     {
+        private static readonly IGoldPriceFetcher[] _platforms = [new cmbchinaFetcher(), new guojijinjiaFetcher(), new huilvbiaoFetcher()];
+        private static int _currentIndex = 0;
+
         public static async Task<GoldResult> GetGoldPrice()
         {
-            IGoldPriceFetcher[] platforms = [new cmbchinaFetcher(), new guojijinjiaFetcher(), new huilvbiaoFetcher()];
-            foreach (var platform in platforms)
+            var platform = _platforms[_currentIndex];
+            _currentIndex = (_currentIndex + 1) % _platforms.Length;
+
+            try
             {
-                try
-                {
-
-                    var result = await platform.FetchCurrentPriceAsync();
-
-                    return result;
-                }
-                finally
-                {
-                    
-                }
+                var result = await platform.FetchCurrentPriceAsync();
+                return result;
             }
+            finally
+            {
 
-            return new GoldResult();
+            }
         }
     }
 }
