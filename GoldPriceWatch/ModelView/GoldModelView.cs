@@ -23,7 +23,7 @@ namespace GoldPriceWatch.ModelView
     /// Handles GoldResult notifications, computes profit/loss, alerts based on config thresholds.
     /// Supports visual alerts like color changes and flashing.
     /// </summary>
-    public partial class GoldModelView : ObservableObject, INotificationHandler<GoldResult>
+    public partial class GoldModelView : ObservableObject, INotificationHandler<GoldResult>, INotificationHandler<FetchStatusChanged>
     {
         private readonly GoldInvestmentConfig _config;
 
@@ -61,6 +61,15 @@ namespace GoldPriceWatch.ModelView
 
         [ObservableProperty]
         private bool isFlashing; // Triggers flashing animation
+
+        [ObservableProperty]
+        private bool isFetching;
+
+        [ObservableProperty]
+        private bool isWaiting = true;
+
+        [ObservableProperty]
+        private string fetchStatusText = "等待中";
 
         /// <summary>
         /// Computed current total value based on config.
@@ -145,6 +154,15 @@ namespace GoldPriceWatch.ModelView
             // Notify UI updates
             OnPropertyChanged(nameof(CurrentTotalValue));
             OnPropertyChanged(nameof(PurchaseTotalValue));
+        }
+
+        public Task Handle(FetchStatusChanged notification, CancellationToken cancellationToken)
+        {
+            IsFetching = notification.State == FetchState.Fetching;
+            IsWaiting = notification.State == FetchState.Waiting;
+            FetchStatusText = IsFetching ? "获取中..." : "...";
+
+            return Task.CompletedTask;
         }
 
         /// <summary>

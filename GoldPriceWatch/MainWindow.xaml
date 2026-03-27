@@ -26,13 +26,20 @@
         <convert:BoolToStringConverter x:Key="PriceTrendSymbolConverter" />
 
         <!-- Flashing Animation -->
-        <Storyboard x:Key="FlashingAnimation" RepeatBehavior="3x" AutoReverse="True">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                             From="1.0" To="0.7" Duration="0:0:0.3"/>
-        </Storyboard>
+        
 
         <!-- Base Price Text Style -->
         <Style x:Key="PriceTextStyle" TargetType="TextBlock">
+            <Style.Resources>
+                <Storyboard x:Key="FlashingAnimation" RepeatBehavior="3x" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                     From="1.0" To="0.7" Duration="0:0:0.3"/>
+                </Storyboard>
+                <Storyboard x:Key="FetchPulseAnimation" RepeatBehavior="Forever" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+					 From="1.0" To="0.65" Duration="0:0:0.45"/>
+                </Storyboard>
+            </Style.Resources>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -46,6 +53,20 @@
                 <DataTrigger Binding="{Binding IsRise}" Value="False">
                     <Setter Property="Foreground" Value="#F44336"/>
                 </DataTrigger>
+                <DataTrigger Binding="{Binding IsWaiting}" Value="True">
+                    <!--<Setter Property="Foreground" Value="#FB8C00"/>-->
+                    <Setter Property="Foreground" Value="Gray"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsFetching}" Value="True">
+                    <Setter Property="Foreground" Value="#1E88E5"/>
+                    <Setter Property="Opacity" Value="0.7"/>
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="FetchPulseStoryboard" Storyboard="{StaticResource FetchPulseAnimation}"/>
+                    </DataTrigger.EnterActions>
+                    <!-- <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="FetchPulseStoryboard"/>
+                    </DataTrigger.ExitActions> -->
+                </DataTrigger>
             </Style.Triggers>
         </Style>
 
@@ -54,6 +75,19 @@
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Foreground" Value="#757575"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="FetchStateTextStyle" TargetType="TextBlock" BasedOn="{StaticResource InfoTextStyle}">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsWaiting}" Value="True">
+                    <!--<Setter Property="Foreground" Value="#FB8C00"/>-->
+                    <Setter Property="Foreground" Value="#FB8C"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsFetching}" Value="True">
+                    <Setter Property="Foreground" Value="#1E88E5"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Border Style with Glow for Alerts -->
@@ -81,11 +115,12 @@
                         <Condition Binding="{Binding IsFlashing}" Value="True"/>
                     </MultiDataTrigger.Conditions>
                     <Setter Property="Foreground" Value="#8BC34A"/>
+                    <Setter Property="Opacity" Value="0.75"/>
                     <MultiDataTrigger.EnterActions>
-                        <BeginStoryboard Storyboard="{StaticResource FlashingAnimation}"/>
+                        <BeginStoryboard x:Name="RiseAlertFlashStoryboard" Storyboard="{StaticResource FlashingAnimation}"/>
                     </MultiDataTrigger.EnterActions>
                     <MultiDataTrigger.ExitActions>
-                        <StopStoryboard/>
+                        <StopStoryboard BeginStoryboardName="RiseAlertFlashStoryboard"/>
                     </MultiDataTrigger.ExitActions>
                 </MultiDataTrigger>
             </Style.Triggers>
@@ -99,11 +134,12 @@
                         <Condition Binding="{Binding IsFlashing}" Value="True"/>
                     </MultiDataTrigger.Conditions>
                     <Setter Property="Foreground" Value="#EF5350"/>
+                    <Setter Property="Opacity" Value="0.75"/>
                     <MultiDataTrigger.EnterActions>
-                        <BeginStoryboard Storyboard="{StaticResource FlashingAnimation}"/>
+                        <BeginStoryboard x:Name="DropAlertFlashStoryboard" Storyboard="{StaticResource FlashingAnimation}"/>
                     </MultiDataTrigger.EnterActions>
                     <MultiDataTrigger.ExitActions>
-                        <StopStoryboard/>
+                        <StopStoryboard BeginStoryboardName="DropAlertFlashStoryboard"/>
                     </MultiDataTrigger.ExitActions>
                 </MultiDataTrigger>
             </Style.Triggers>
@@ -130,6 +166,7 @@
                     <Run Text="{Binding IsRise, Converter={StaticResource PriceTrendSymbolConverter}, ConverterParameter='↑|↓'}"/>
                     <Run Text="{Binding PriceRangePercentage}"/>
                 </TextBlock>
+                <TextBlock Text="{Binding FetchStatusText}" Style="{StaticResource FetchStateTextStyle}" Margin="8,0,0,0"/>
             </StackPanel>
 
             <!-- Middle Row: Profit/Loss -->

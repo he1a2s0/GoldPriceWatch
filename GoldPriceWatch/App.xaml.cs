@@ -46,6 +46,7 @@ namespace GoldPriceWatch
                     services.AddSingleton<GoldInvestmentConfig>(new GoldInvestmentConfig());
                     services.AddSingleton<GoldModelView>();
                     services.AddSingleton<INotificationHandler<GoldResult>>(provide => provide.GetRequiredService<GoldModelView>());
+                    services.AddSingleton<INotificationHandler<FetchStatusChanged>>(provide => provide.GetRequiredService<GoldModelView>());
                     // 注册 WPF 主窗口
                     services.AddSingleton<MainWindow>();
 
