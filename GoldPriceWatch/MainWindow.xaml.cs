@@ -3,6 +3,7 @@ using GoldPriceWatch.Model;
 using GoldPriceWatch.ModelView;
 using MediatR;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +14,29 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Interop;
+
+namespace GoldPriceWatch
+{
+    public static class WindowHelper
+    {
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+
+        public static void HideFromAltTab(Window window)
+        {
+            var helper = new WindowInteropHelper(window);
+            var exStyle = GetWindowLong(helper.Handle, GWL_EXSTYLE);
+            SetWindowLong(helper.Handle, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
+        }
+    }
+}
 
 namespace GoldPriceWatch
 {
@@ -40,6 +64,7 @@ namespace GoldPriceWatch
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            WindowHelper.HideFromAltTab(this);
             RestoreWindowPosition();
         }
 

@@ -8,7 +8,7 @@
         xmlns:hc="https://handyorg.github.io/handycontrol"
         xmlns:convert="clr-namespace:GoldPriceWatch.Convert"
         mc:Ignorable="d"
-        Title="黄金价格监控" 
+        Title="黄金价格监控"
         Height="80" Width="300"
         WindowStyle="None"
         Background="Transparent"
