@@ -1,19 +1,11 @@
-﻿using GoldPriceWatch.Core;
-using GoldPriceWatch.Model;
+﻿using GoldPriceWatch.Model;
 using GoldPriceWatch.ModelView;
-using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Interop;
 
 namespace GoldPriceWatch
@@ -41,7 +33,8 @@ namespace GoldPriceWatch
 namespace GoldPriceWatch
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// 悬浮框：无边框透明置顶窗体，显示当前金价与盈亏。
+    /// 关闭时隐藏到托盘（仅能经托盘菜单退出）。
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -50,7 +43,6 @@ namespace GoldPriceWatch
 
         private readonly GoldInvestmentConfig _config;
         private GoldModelView? _viewModel;
-        private Point _startPoint;
 
         public MainWindow(GoldModelView MainModel, GoldInvestmentConfig config)
         {
@@ -70,7 +62,16 @@ namespace GoldPriceWatch
 
         private void MainWindow_Closing(object? sender, CancelEventArgs e)
         {
+            // 托盘菜单退出时放行；否则关闭即隐藏到托盘
+            if (App.Current.IsShuttingDown)
+            {
+                SaveWindowPosition();
+                return;
+            }
+
+            e.Cancel = true;
             SaveWindowPosition();
+            Hide();
         }
 
         private void RestoreWindowPosition()
@@ -162,14 +163,22 @@ namespace GoldPriceWatch
             }
         }
 
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            _viewModel?.ExitApp();
-        }
-
-        private void MenuItem_Click_1(object sender, RoutedEventArgs e)
+        private void MenuOpenConfig_Click(object sender, RoutedEventArgs e)
         {
             new GoldInvestmentWindow().Show();
+        }
+
+        private void MenuOpenHolding_Click(object sender, RoutedEventArgs e)
+        {
+            var window = App.Current.Services.GetRequiredService<HoldingWindow>();
+            window.Show();
+            window.WindowState = WindowState.Normal;
+            window.Activate();
+        }
+
+        private void MenuHideFloating_Click(object sender, RoutedEventArgs e)
+        {
+            Hide();
         }
     }
 }

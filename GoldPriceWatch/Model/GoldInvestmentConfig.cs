@@ -41,6 +41,7 @@ namespace GoldPriceWatch.Model
         private string[] _notificationChannels = { "Console" };
         private double? _mainWindowLeft;
         private double? _mainWindowTop;
+        private int _refreshIntervalSeconds = 10;
 
         /// <summary>
         /// 无参构造函数，用于JSON反序列化。
@@ -358,6 +359,23 @@ namespace GoldPriceWatch.Model
         }
 
         /// <summary>
+        /// 价格刷新间隔（秒），驱动后台取价循环。
+        /// </summary>
+        [JsonPropertyName("refreshIntervalSeconds")]
+        public int RefreshIntervalSeconds
+        {
+            get => _refreshIntervalSeconds;
+            set
+            {
+                if (_refreshIntervalSeconds != value)
+                {
+                    _refreshIntervalSeconds = Math.Max(2, value);
+                    if (!_isLoading) SaveToFile();
+                }
+            }
+        }
+
+        /// <summary>
         /// 从JSON文件加载配置（如果存在）。
         /// </summary>
         private void LoadFromFile()
@@ -442,6 +460,10 @@ namespace GoldPriceWatch.Model
                 if (root.TryGetProperty("mainWindowTop", out prop))
                 {
                     MainWindowTop = prop.ValueKind == JsonValueKind.Null ? null : prop.GetDouble();
+                }
+                if (root.TryGetProperty("refreshIntervalSeconds", out prop))
+                {
+                    RefreshIntervalSeconds = prop.GetInt32();
                 }
             }
             catch (Exception ex)

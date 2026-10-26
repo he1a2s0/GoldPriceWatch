@@ -25,6 +25,7 @@ namespace GoldPriceWatch.Core.Fetcher
                 var data = result.body.data[0];
                 return new GoldResult
                 {
+                    Source = "招商银行",
                     CurrentPrice = data.curPrice,
                     HighPrice = data.high,
                     LowPrice = data.low,

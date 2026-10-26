@@ -192,8 +192,9 @@
 
         <Border.ContextMenu>
             <ContextMenu>
-                <MenuItem Header="配置" Click="MenuItem_Click_1"/>
-                <MenuItem Header="退出" Click="MenuItem_Click"/>
+                <MenuItem Header="配置" Click="MenuOpenConfig_Click"/>
+                <MenuItem Header="打开持仓监控" Click="MenuOpenHolding_Click"/>
+                <MenuItem Header="隐藏悬浮框" Click="MenuHideFloating_Click"/>
             </ContextMenu>
         </Border.ContextMenu>
     </Border>

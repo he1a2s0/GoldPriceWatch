@@ -1,4 +1,4 @@
-﻿using Flurl.Http;
+using Flurl.Http;
 using GoldPriceWatch.Model;
 using System;
 using System.Collections.Generic;
@@ -25,6 +25,7 @@ namespace GoldPriceWatch.Core.Fetcher
                     string[] vals = MatchVar.Value.Split(",");
                     return new GoldResult
                     {
+                        Source = "汇率表",
                         CurrentPrice = vals[0],
                         HighPrice = vals[4],
                         LowPrice = vals[5],

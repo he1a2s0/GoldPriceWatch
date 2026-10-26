@@ -25,6 +25,7 @@ namespace GoldPriceWatch.Core.Fetcher
                     string[] vals = MatchVar.Value.Split(",");
                     return new GoldResult
                     {
+                        Source = "国际金价",
                         CurrentPrice = vals[0],
                         HighPrice = vals[4],
                         LowPrice = vals[5],

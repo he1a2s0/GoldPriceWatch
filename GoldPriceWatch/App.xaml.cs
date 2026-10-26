@@ -1,14 +1,13 @@
-﻿using GoldPriceWatch.Core.Background;
+using GoldPriceWatch.Core;
+using GoldPriceWatch.Core.Background;
 using GoldPriceWatch.Model;
 using GoldPriceWatch.ModelView;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Configuration;
-using System.Data;
+using System;
 using System.Windows;
-using System.Windows.Navigation;
 
 namespace GoldPriceWatch
 {
@@ -27,6 +26,11 @@ namespace GoldPriceWatch
         /// 提供全局服务访问
         /// </summary>
         public IServiceProvider Services => _host.Services;
+
+        /// <summary>
+        /// 是否正在退出。为 true 时各窗口不再拦截关闭（用于托盘菜单退出）。
+        /// </summary>
+        public bool IsShuttingDown { get; set; }
 
         public App()
         {
@@ -47,11 +51,18 @@ namespace GoldPriceWatch
                     services.AddSingleton<GoldModelView>();
                     services.AddSingleton<INotificationHandler<GoldResult>>(provide => provide.GetRequiredService<GoldModelView>());
                     services.AddSingleton<INotificationHandler<FetchStatusChanged>>(provide => provide.GetRequiredService<GoldModelView>());
-                    // 注册 WPF 主窗口
+                    // 持仓监控（复用同一取价管道）
+                    services.AddSingleton<HoldingViewModel>();
+                    services.AddSingleton<INotificationHandler<GoldResult>>(provide => provide.GetRequiredService<HoldingViewModel>());
+                    // 注册 WPF 窗口
                     services.AddSingleton<MainWindow>();
+                    services.AddSingleton<HoldingWindow>();
+                    // 托盘图标
+                    services.AddSingleton<TrayIconService>();
 
-                    // 注册后台服务
-                    services.AddHostedService<LoopFetcherService>();
+                    // 注册后台服务：同时注册具体类型，供“立即刷新”通过 DI 直接调用
+                    services.AddSingleton<LoopFetcherService>();
+                    services.AddHostedService(sp => sp.GetRequiredService<LoopFetcherService>());
                 })
                 .Build();
         }
@@ -65,9 +76,12 @@ namespace GoldPriceWatch
                 // 启动主机，运行所有托管服务
                 await _host.StartAsync();
 
-                // 显示主窗口
+                // 显示悬浮框
                 var mainWindow = _host.Services.GetRequiredService<MainWindow>();
                 mainWindow.Show();
+
+                // 启动即显示托盘图标
+                _host.Services.GetRequiredService<TrayIconService>();
             }
             catch (Exception ex)
             {

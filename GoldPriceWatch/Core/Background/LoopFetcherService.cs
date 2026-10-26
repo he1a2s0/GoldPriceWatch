@@ -1,23 +1,26 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using GoldPriceWatch.Model;
 
 namespace GoldPriceWatch.Core.Background
 {
+    /// <summary>
+    /// 后台取价循环：按配置的刷新间隔轮询金价，并通过 MediatR 发布结果与状态。
+    /// </summary>
     public class LoopFetcherService : BackgroundService
     {
         private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(4);
 
         private readonly IMediator mediator;
+        private readonly GoldInvestmentConfig _config;
 
-        public LoopFetcherService(IMediator mediator)
+        public LoopFetcherService(IMediator mediator, GoldInvestmentConfig config)
         {
             this.mediator = mediator;
+            _config = config;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,9 +35,9 @@ namespace GoldPriceWatch.Core.Background
                     await InvokeWithTimeout(stoppingToken);
 
                     await mediator.Publish(new FetchStatusChanged(FetchState.Waiting), stoppingToken);
-                    await Task.Delay(5000, stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Max(2, _config.RefreshIntervalSeconds)), stoppingToken);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     await mediator.Publish(new FetchStatusChanged(FetchState.Waiting), CancellationToken.None);
                 }
