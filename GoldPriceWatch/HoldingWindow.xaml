@@ -29,6 +29,14 @@
             <Setter Property="CaretBrush" Value="#FF2B2B33"/>
         </Style>
 
+        <Style x:Key="InputComboStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#FF2B2B33"/>
+            <Setter Property="BorderBrush" Value="#FFC6C6D2"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
         <Style x:Key="GoldButton" TargetType="Button">
             <Setter Property="Background" Value="#FFE0A83E"/>
             <Setter Property="Foreground" Value="#FF3B2E10"/>
@@ -57,127 +65,299 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
         </Style>
+
+        <Style x:Key="FormLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FF4A4A52"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="TabBarItemStyle" TargetType="TabItem">
+            <Setter Property="Foreground" Value="#FF6E6E78"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="18,6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Foreground" Value="#FFB8860B"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="400" MinWidth="340" MaxWidth="520"/>
+            <ColumnDefinition Width="420" MinWidth="360" MaxWidth="560"/>
             <ColumnDefinition Width="6"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ═══════════ 左侧：记录与设置 ═══════════ -->
-        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <!-- 买入/卖出记录 -->
-                <GroupBox Header="买入 / 卖出记录" Style="{StaticResource GroupStyle}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <RadioButton Content="买入" IsChecked="{Binding NewIsBuy}" Foreground="#FFE84C4C" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <RadioButton Content="卖出" Foreground="#FF2EB86E" VerticalAlignment="Center"/>
+        <!-- ═══════════ 左侧：TabControl 分区 ═══════════ -->
+        <TabControl x:Name="LeftTabs" Grid.Column="0" TabStripPlacement="Top" Background="Transparent"
+                    BorderThickness="0" ClipToBounds="True">
+
+            <!-- ── Tab 1: 交易记录 ── -->
+            <TabItem Header="交易记录" Style="{StaticResource TabBarItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent">
+                    <StackPanel Margin="4,10,4,4">
+                        <!-- 买入/卖出记录 -->
+                        <GroupBox Header="买入 / 卖出记录" Style="{StaticResource GroupStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <RadioButton Content="买入" IsChecked="{Binding NewIsBuy}" Foreground="#FFE84C4C" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <RadioButton Content="卖出" Foreground="#FF2EB86E" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBox Grid.Column="1" Style="{StaticResource InputStyle}" Margin="4,0"
+                                             ToolTip="价格 (元/克)"
+                                             Text="{Binding NewPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                    <TextBox Grid.Column="2" Style="{StaticResource InputStyle}" Margin="4,0"
+                                             ToolTip="克重 (g)"
+                                             Text="{Binding NewWeight, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                    <Button Grid.Column="3" Style="{StaticResource GoldButton}" Content="添加"
+                                            Command="{Binding AddOrderCommand}"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="方向" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="价格 (元/克)" Foreground="#FF8A8A95" Margin="8,0,0,0"/>
+                                    <TextBlock Grid.Column="2" Text="克重 (g)" Foreground="#FF8A8A95" Margin="8,0,0,0"/>
+                                </Grid>
+                                <DataGrid ItemsSource="{Binding Orders}" AutoGenerateColumns="False" CanUserAddRows="False"
+                                          IsReadOnly="True" HeadersVisibility="Column"
+                                          Background="White" Foreground="#FF2B2B33"
+                                          BorderBrush="#FFD8D8E0" RowBackground="White" AlternatingRowBackground="#FFF6F6F8"
+                                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#FFE8E8EE"
+                                          SelectionMode="Single">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="时间" Binding="{Binding Time, StringFormat=MM-dd HH:mm}" Width="90"/>
+                                        <DataGridTextColumn Header="方向" Binding="{Binding SideText}" Width="50">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{Binding Side, Converter={StaticResource SideColor}}"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="价格" Binding="{Binding Price, StringFormat=F2}" Width="70"/>
+                                        <DataGridTextColumn Header="克重" Binding="{Binding Weight, StringFormat=F4}" Width="80"/>
+                                        <DataGridTextColumn Header="金额" Binding="{Binding Amount, StringFormat=F2}" Width="*"/>
+                                        <DataGridTemplateColumn Header="" Width="50">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="删除" FontSize="11" Padding="6,2"
+                                                            Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
+                                                            Command="{Binding DataContext.DeleteOrderCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </StackPanel>
-                            <TextBox Grid.Column="1" Style="{StaticResource InputStyle}" Margin="4,0"
-                                     ToolTip="价格 (元/克)"
-                                     Text="{Binding NewPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
-                            <TextBox Grid.Column="2" Style="{StaticResource InputStyle}" Margin="4,0"
-                                     ToolTip="克重 (g)"
-                                     Text="{Binding NewWeight, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
-                            <Button Grid.Column="3" Style="{StaticResource GoldButton}" Content="添加"
-                                    Command="{Binding AddOrderCommand}"/>
-                        </Grid>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="方向" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="价格 (元/克)" Foreground="#FF8A8A95" Margin="8,0,0,0"/>
-                            <TextBlock Grid.Column="2" Text="克重 (g)" Foreground="#FF8A8A95" Margin="8,0,0,0"/>
-                        </Grid>
-                        <DataGrid ItemsSource="{Binding Orders}" AutoGenerateColumns="False" CanUserAddRows="False"
-                                  IsReadOnly="True" Height="230" HeadersVisibility="Column"
-                                  Background="White" Foreground="#FF2B2B33"
-                                  BorderBrush="#FFD8D8E0" RowBackground="White" AlternatingRowBackground="#FFF6F6F8"
-                                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#FFE8E8EE"
-                                  SelectionMode="Single">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="时间" Binding="{Binding Time, StringFormat=MM-dd HH:mm}" Width="90"/>
-                                <DataGridTextColumn Header="方向" Binding="{Binding SideText}" Width="50">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{Binding Side, Converter={StaticResource SideColor}}"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="价格" Binding="{Binding Price, StringFormat=F2}" Width="70"/>
-                                <DataGridTextColumn Header="克重" Binding="{Binding Weight, StringFormat=F4}" Width="80"/>
-                                <DataGridTextColumn Header="金额" Binding="{Binding Amount, StringFormat=F2}" Width="*"/>
-                                <DataGridTemplateColumn Header="" Width="50">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="删除" FontSize="11" Padding="6,2"
-                                                    Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
-                                                    Command="{Binding DataContext.DeleteOrderCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                    CommandParameter="{Binding}"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </StackPanel>
-                </GroupBox>
+                        </GroupBox>
 
-                <!-- 费率设置 -->
-                <GroupBox Header="费率设置" Style="{StaticResource GroupStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="卖出费率 (%)" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBox Width="80" Style="{StaticResource InputStyle}"
-                                 Text="{Binding FeeRatePercent, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
-                        <TextBlock Text="  买入免手续费，卖出按成交金额收取" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
+                        <!-- 费率设置 -->
+                        <GroupBox Header="费率设置" Style="{StaticResource GroupStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="卖出费率 (%)" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox Width="80" Style="{StaticResource InputStyle}"
+                                         Text="{Binding FeeRatePercent, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                <TextBlock Text="  买入免手续费，卖出按成交金额收取" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
-                </GroupBox>
+                </ScrollViewer>
+            </TabItem>
 
-                <!-- 监控设置 -->
-                <GroupBox Header="监控设置" Style="{StaticResource GroupStyle}">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBlock Text="刷新间隔 (秒)" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBox Width="70" Style="{StaticResource InputStyle}"
-                                     Text="{Binding RefreshIntervalSeconds, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
-                            <CheckBox Content="启用价格提醒" IsChecked="{Binding AlertEnabled}"
-                                      VerticalAlignment="Center" Margin="20,0,0,0" Foreground="#FF2B2B33"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBlock Text="高价提醒 (元/克)" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBox Width="90" Style="{StaticResource InputStyle}"
-                                     Text="{Binding AlertHighPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
-                            <TextBlock Text="0 = 不启用" Foreground="#FF8A8A95" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <TextBlock Text="低价提醒 (元/克)" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBox Width="90" Style="{StaticResource InputStyle}"
-                                     Text="{Binding AlertLowPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
-                            <TextBlock Text="0 = 不启用" Foreground="#FF8A8A95" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Button Content="立即刷新" Style="{StaticResource GoldButton}" Padding="20,6"
-                                    Command="{Binding RefreshNowCommand}"/>
-                            <TextBlock Text="{Binding LastUpdateText}" Foreground="#FF6E6E78" VerticalAlignment="Center" Margin="14,0,0,0"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding StatusText}" Foreground="#FFE84C4C" Margin="0,8,0,0" TextWrapping="Wrap"/>
+            <!-- ── Tab 2: 监控提醒 ── -->
+            <TabItem Header="监控提醒" Style="{StaticResource TabBarItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent">
+                    <StackPanel Margin="4,10,4,4">
+                        <!-- 刷新设置 -->
+                        <GroupBox Header="刷新与通知" Style="{StaticResource GroupStyle}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="刷新间隔 (秒)" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBox Width="70" Style="{StaticResource InputStyle}"
+                                             Text="{Binding RefreshIntervalSeconds, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                    <CheckBox Content="启用桌面通知" IsChecked="{Binding ShowNotice}"
+                                              VerticalAlignment="Center" Margin="20,0,0,0" Foreground="#FF2B2B33"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="立即刷新" Style="{StaticResource GoldButton}" Padding="20,6"
+                                            Command="{Binding RefreshNowCommand}"/>
+                                    <TextBlock Text="{Binding LastUpdateText}" Foreground="#FF6E6E78" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding StatusText}" Foreground="#FFE84C4C" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- 绝对价格提醒 -->
+                        <GroupBox Header="目标价位提醒" Style="{StaticResource GroupStyle}">
+                            <StackPanel>
+                                <CheckBox Content="启用价格提醒" IsChecked="{Binding AlertEnabled}"
+                                          Foreground="#FF2B2B33" Margin="0,0,0,8"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="高价提醒 (元/克)" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Width="120" Style="{StaticResource InputStyle}" Margin="8,0"
+                                             Text="{Binding AlertHighPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                    <TextBlock Grid.Column="2" Text="低价提醒 (元/克)" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="3" Width="120" Style="{StaticResource InputStyle}" Margin="8,0"
+                                             Text="{Binding AlertLowPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                </Grid>
+                                <TextBlock Text="0 = 不启用对应方向提醒" Foreground="#FF8A8A95" FontSize="11"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- 卖出/止损目标 -->
+                        <GroupBox Header="卖出 / 止损目标价" Style="{StaticResource GroupStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="目标卖出价 (元/克)" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Width="120" Style="{StaticResource InputStyle}" Margin="8,0"
+                                         Text="{Binding TargetSellPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                <TextBlock Grid.Column="2" Text="止损价 (元/克)" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="3" Width="120" Style="{StaticResource InputStyle}" Margin="8,0"
+                                         Text="{Binding StopLossPrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- 降价报警 -->
+                        <GroupBox Header="降价报警" Style="{StaticResource GroupStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="阈值类型" Style="{StaticResource FormLabel}"/>
+                                <ComboBox Grid.Column="1" Style="{StaticResource InputComboStyle}" Margin="8,0,20,0"
+                                          SelectedValue="{Binding DropAlertType, UpdateSourceTrigger=PropertyChanged}"
+                                          ItemsSource="{Binding AlertThresholdTypeList}"
+                                          DisplayMemberPath="Title" SelectedValuePath="Value" MinWidth="120"/>
+                                <TextBlock Grid.Column="2" Text="阈值" Style="{StaticResource FormLabel}"/>
+                                <TextBox Grid.Column="3" Style="{StaticResource InputStyle}" Margin="8,0"
+                                         Text="{Binding DropAlertThreshold, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- 涨价提醒 -->
+                        <GroupBox Header="涨价提醒" Style="{StaticResource GroupStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="阈值类型" Style="{StaticResource FormLabel}"/>
+                                <ComboBox Grid.Column="1" Style="{StaticResource InputComboStyle}" Margin="8,0,20,0"
+                                          SelectedValue="{Binding RiseAlertType, UpdateSourceTrigger=PropertyChanged}"
+                                          ItemsSource="{Binding AlertThresholdTypeList}"
+                                          DisplayMemberPath="Title" SelectedValuePath="Value" MinWidth="120"/>
+                                <TextBlock Grid.Column="2" Text="阈值" Style="{StaticResource FormLabel}"/>
+                                <TextBox Grid.Column="3" Style="{StaticResource InputStyle}" Margin="8,0"
+                                         Text="{Binding RiseAlertThreshold, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- 波动率 & 结算 -->
+                        <GroupBox Header="其他警报" Style="{StaticResource GroupStyle}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="波动率阈值 (%)" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBox Width="80" Style="{StaticResource InputStyle}"
+                                             Text="{Binding VolatilityThreshold, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                    <TextBlock Text="  当日波动超过此值时警报" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <CheckBox Content="启用每日结算价提醒" IsChecked="{Binding EnableSettlementAlert}"
+                                          Foreground="#FF2B2B33"/>
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
-                </GroupBox>
-            </StackPanel>
-        </ScrollViewer>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ── Tab 3: 投资配置 ── -->
+            <TabItem Header="投资配置" Style="{StaticResource TabBarItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent">
+                    <StackPanel Margin="4,10,4,4">
+                        <!-- 基本信息 -->
+                        <GroupBox Header="基本信息" Style="{StaticResource GroupStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="单位" Style="{StaticResource FormLabel}"/>
+                                <ComboBox Grid.Row="0" Grid.Column="1" Style="{StaticResource InputComboStyle}" Margin="8,0,20,0"
+                                          SelectedValue="{Binding Unit, UpdateSourceTrigger=PropertyChanged}"
+                                          ItemsSource="{Binding GoldUnitList}"
+                                          DisplayMemberPath="Title" SelectedValuePath="Value" MinWidth="120"/>
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="货币" Style="{StaticResource FormLabel}"/>
+                                <TextBox Grid.Row="0" Grid.Column="3" Style="{StaticResource InputStyle}" Margin="8,0"
+                                         Text="{Binding Currency, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                <TextBlock Grid.Row="1" Text="买入基准价 (元/克)" Style="{StaticResource FormLabel}" Margin="0,8,0,0"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource InputStyle}" Margin="8,8,20,0"
+                                         Text="{Binding PurchasePrice, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="基准克数" Style="{StaticResource FormLabel}" Margin="0,8,0,0"/>
+                                <TextBox Grid.Row="1" Grid.Column="3" Style="{StaticResource InputStyle}" Margin="8,8,0,0"
+                                         Text="{Binding TotalGrams, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4"
+                                           Text="买入基准价 / 基准克数用于计算盈亏百分比，建议设为历史持仓均价和总克数"
+                                           Foreground="#FF8A8A95" FontSize="11" Margin="0,10,0,0"/>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- 通知渠道 -->
+                        <GroupBox Header="通知渠道" Style="{StaticResource GroupStyle}">
+                            <StackPanel>
+                                <TextBlock Text="渠道 (逗号分隔)" Style="{StaticResource FormLabel}" Margin="0,0,0,6"/>
+                                <TextBox Style="{StaticResource InputStyle}" Height="60" AcceptsReturn="True" TextWrapping="Wrap"
+                                         Text="{Binding NotificationChannelsString, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="默认 Console，可扩展如 Email, Push 等" Foreground="#FF8A8A95" FontSize="11"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
 
         <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
                       Background="Transparent" ResizeBehavior="PreviousAndNext"/>

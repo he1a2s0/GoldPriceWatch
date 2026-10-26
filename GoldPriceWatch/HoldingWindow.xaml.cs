@@ -8,7 +8,7 @@ namespace GoldPriceWatch
 {
     /// <summary>
     /// 持仓监控窗口：买卖流水、费率、监控设置、统计与价格走势图。
-    /// 关闭时隐藏到托盘，可经托盘菜单再次打开。
+    /// 关闭时隐藏到托盘，可经托盘菜单再次显示。
     /// </summary>
     public partial class HoldingWindow : Window
     {
@@ -17,6 +17,13 @@ namespace GoldPriceWatch
             InitializeComponent();
             DataContext = App.Current.Services.GetRequiredService<HoldingViewModel>();
             Closing += HoldingWindow_Closing;
+        }
+
+        /// <summary>切到指定 Tab。0=交易记录, 1=监控提醒, 2=投资配置。</summary>
+        public void SelectTab(int index)
+        {
+            if (index >= 0 && index < LeftTabs.Items.Count)
+                LeftTabs.SelectedIndex = index;
         }
 
         private void HoldingWindow_Closing(object? sender, CancelEventArgs e)

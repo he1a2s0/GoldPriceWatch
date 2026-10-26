@@ -179,16 +179,6 @@ namespace GoldPriceWatch.ModelView
         }
 
         /// <summary>
-        /// Command to open config window (bind to MenuItem).
-        /// </summary>
-        public void OpenConfigWindow()
-        {
-            var configWindow = new GoldInvestmentWindow();
-            configWindow.DataContext = new GoldInvestmentViewModel(); // Assuming ViewModel from previous
-            configWindow.ShowDialog();
-        }
-
-        /// <summary>
         /// Command to exit app (bind to MenuItem).
         /// </summary>
         public void ExitApp()

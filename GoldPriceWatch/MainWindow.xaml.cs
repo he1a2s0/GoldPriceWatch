@@ -1,4 +1,4 @@
-﻿using GoldPriceWatch.Model;
+using GoldPriceWatch.Model;
 using GoldPriceWatch.ModelView;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -165,7 +165,11 @@ namespace GoldPriceWatch
 
         private void MenuOpenConfig_Click(object sender, RoutedEventArgs e)
         {
-            new GoldInvestmentWindow().Show();
+            var window = App.Current.Services.GetRequiredService<HoldingWindow>();
+            window.Show();
+            window.WindowState = WindowState.Normal;
+            window.Activate();
+            window.SelectTab(1); // 切到"监控提醒"页
         }
 
         private void MenuOpenHolding_Click(object sender, RoutedEventArgs e)

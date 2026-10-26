@@ -29,7 +29,7 @@ namespace GoldPriceWatch.Core
             _toggleFloatingItem = new WinForms.ToolStripMenuItem("隐藏悬浮框", null, (_, _) => ToggleFloating());
             menu.Items.Add(_toggleFloatingItem);
             menu.Items.Add("打开持仓监控", null, (_, _) => ToggleHolding());
-            menu.Items.Add("配置", null, (_, _) => ShowConfig());
+            menu.Items.Add("监控设置", null, (_, _) => ShowConfig());
             menu.Items.Add(new WinForms.ToolStripSeparator());
             menu.Items.Add("退出", null, (_, _) => ExitApp());
 
@@ -121,7 +121,11 @@ namespace GoldPriceWatch.Core
 
         private static void ShowConfig()
         {
-            new GoldInvestmentWindow().Show();
+            var w = App.Current.Services.GetRequiredService<HoldingWindow>();
+            w.Show();
+            w.WindowState = WindowState.Normal;
+            w.Activate();
+            w.SelectTab(1); // 切到"监控提醒"页
         }
 
         private void ExitApp()

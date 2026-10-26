@@ -3,12 +3,15 @@ using CommunityToolkit.Mvvm.Input;
 using GoldPriceWatch.Components;
 using GoldPriceWatch.Core;
 using GoldPriceWatch.Core.Background;
+using GoldPriceWatch.Enums;
 using GoldPriceWatch.Model;
 using HandyControl.Controls;
 using HandyControl.Data;
+using Masuit.Tools.Systems;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -140,6 +143,114 @@ namespace GoldPriceWatch.ModelView
         partial void OnAlertLowPriceChanged(decimal value) => Persist();
         #endregion
 
+        #region 投资配置（转发 GoldInvestmentConfig）
+
+        public List<SelectedValue<GoldUnit>> GoldUnitList =>
+            typeof(GoldUnit).GetDescriptionAndValue().Select(it => new SelectedValue<GoldUnit>
+            {
+                Value = (GoldUnit)it.Value,
+                Title = it.Key
+            }).ToList();
+
+        public List<SelectedValue<AlertThresholdType>> AlertThresholdTypeList =>
+            typeof(AlertThresholdType).GetDescriptionAndValue().Select(it => new SelectedValue<AlertThresholdType>
+            {
+                Value = (AlertThresholdType)it.Value,
+                Title = it.Key
+            }).ToList();
+
+        public bool ShowNotice
+        {
+            get => _config.ShowNotice;
+            set { _config.ShowNotice = value; OnPropertyChanged(); }
+        }
+
+        public decimal PurchasePrice
+        {
+            get => _config.PurchasePrice;
+            set { if (_config.PurchasePrice != value) { _config.PurchasePrice = value; OnPropertyChanged(); } }
+        }
+
+        public decimal TotalGrams
+        {
+            get => _config.TotalGrams;
+            set { if (_config.TotalGrams != value) { _config.TotalGrams = value; OnPropertyChanged(); } }
+        }
+
+        public GoldUnit Unit
+        {
+            get => _config.Unit;
+            set { if (_config.Unit != value) { _config.Unit = value; OnPropertyChanged(); } }
+        }
+
+        public string Currency
+        {
+            get => _config.Currency;
+            set { if (_config.Currency != value) { _config.Currency = value; OnPropertyChanged(); } }
+        }
+
+        public decimal? TargetSellPrice
+        {
+            get => _config.TargetSellPrice;
+            set { if (_config.TargetSellPrice != value) { _config.TargetSellPrice = value; OnPropertyChanged(); } }
+        }
+
+        public decimal? StopLossPrice
+        {
+            get => _config.StopLossPrice;
+            set { if (_config.StopLossPrice != value) { _config.StopLossPrice = value; OnPropertyChanged(); } }
+        }
+
+        public AlertThresholdType DropAlertType
+        {
+            get => _config.DropAlertType;
+            set { if (_config.DropAlertType != value) { _config.DropAlertType = value; OnPropertyChanged(); } }
+        }
+
+        public decimal DropAlertThreshold
+        {
+            get => _config.DropAlertThreshold;
+            set { if (_config.DropAlertThreshold != value) { _config.DropAlertThreshold = value; OnPropertyChanged(); } }
+        }
+
+        public AlertThresholdType RiseAlertType
+        {
+            get => _config.RiseAlertType;
+            set { if (_config.RiseAlertType != value) { _config.RiseAlertType = value; OnPropertyChanged(); } }
+        }
+
+        public decimal RiseAlertThreshold
+        {
+            get => _config.RiseAlertThreshold;
+            set { if (_config.RiseAlertThreshold != value) { _config.RiseAlertThreshold = value; OnPropertyChanged(); } }
+        }
+
+        public decimal? VolatilityThreshold
+        {
+            get => _config.VolatilityThreshold;
+            set { if (_config.VolatilityThreshold != value) { _config.VolatilityThreshold = value; OnPropertyChanged(); } }
+        }
+
+        public bool EnableSettlementAlert
+        {
+            get => _config.EnableSettlementAlert;
+            set { if (_config.EnableSettlementAlert != value) { _config.EnableSettlementAlert = value; OnPropertyChanged(); } }
+        }
+
+        public string NotificationChannelsString
+        {
+            get => string.Join(",", _config.NotificationChannels ?? Array.Empty<string>());
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    _config.NotificationChannels = Array.Empty<string>();
+                else
+                    _config.NotificationChannels = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToArray();
+                OnPropertyChanged();
+            }
+        }
+        #endregion
+
         #region 行情与持仓展示
         [ObservableProperty]
         private decimal currentPrice;
@@ -251,7 +362,7 @@ namespace GoldPriceWatch.ModelView
                 if (!_highAlertActive)
                 {
                     _highAlertActive = true;
-                    ShowNotice($"金价已涨至 {price:F2}，达到提醒线 {AlertHighPrice:F2}");
+                    Notify($"金价已涨至 {price:F2}，达到提醒线 {AlertHighPrice:F2}");
                 }
             }
             else _highAlertActive = false;
@@ -261,13 +372,13 @@ namespace GoldPriceWatch.ModelView
                 if (!_lowAlertActive)
                 {
                     _lowAlertActive = true;
-                    ShowNotice($"金价已跌至 {price:F2}，触及提醒线 {AlertLowPrice:F2}");
+                    Notify($"金价已跌至 {price:F2}，触及提醒线 {AlertLowPrice:F2}");
                 }
             }
             else _lowAlertActive = false;
         }
 
-        private static void ShowNotice(string message) =>
+        private static void Notify(string message) =>
             Notification.Show(new AppNotification(message), ShowAnimation.Fade, true);
 
         private void Persist()
