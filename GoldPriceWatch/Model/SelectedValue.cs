@@ -8,7 +8,7 @@ namespace GoldPriceWatch.Model
 {
     public class SelectedValue<T>
     {
-        public string Title { get; set; }
-        public T Value { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public T Value { get; set; } = default!;
     }
 }

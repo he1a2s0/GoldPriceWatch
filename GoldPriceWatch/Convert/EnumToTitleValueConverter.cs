@@ -1,24 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Data;
 
 namespace GoldPriceWatch.Convert
 {
     public class EnumToTitleValueConverter : IValueConverter
     {
-
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value == null) return null;
 
+            string? name = value.ToString();
+            if (string.IsNullOrEmpty(name)) return string.Empty;
+
             // 获取枚举值对应的Display特性
-            MemberInfo[] memberInfo = value.GetType().GetMember(value.ToString());
+            MemberInfo[] memberInfo = value.GetType().GetMember(name);
             if (memberInfo.Length > 0)
             {
                 var attributes = memberInfo[0].GetCustomAttributes(typeof(DisplayAttribute), false);
@@ -30,15 +28,15 @@ namespace GoldPriceWatch.Convert
             }
 
             // 如果没有Display特性，直接返回枚举值
-            return value.ToString();
+            return name;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             // 这里简化处理，实际应用中可能需要更复杂的转换逻辑
             if (value == null) return null;
 
-            string stringValue = value.ToString();
+            string stringValue = value.ToString() ?? string.Empty;
             int index = stringValue.IndexOf('(');
             if (index > 0)
             {
