@@ -19,7 +19,7 @@ namespace GoldPriceWatch
             Closing += HoldingWindow_Closing;
         }
 
-        /// <summary>切到指定 Tab。0=交易记录, 1=监控提醒, 2=投资配置。</summary>
+        /// <summary>切到指定 Tab。0=交易记录, 1=监控提醒。</summary>
         public void SelectTab(int index)
         {
             if (index >= 0 && index < LeftTabs.Items.Count)

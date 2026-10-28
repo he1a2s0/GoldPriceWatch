@@ -143,14 +143,7 @@ namespace GoldPriceWatch.ModelView
         partial void OnAlertLowPriceChanged(decimal value) => Persist();
         #endregion
 
-        #region 投资配置（转发 GoldInvestmentConfig）
-
-        public List<SelectedValue<GoldUnit>> GoldUnitList =>
-            typeof(GoldUnit).GetDescriptionAndValue().Select(it => new SelectedValue<GoldUnit>
-            {
-                Value = (GoldUnit)it.Value,
-                Title = it.Key
-            }).ToList();
+        #region 提醒与通知配置（转发 GoldInvestmentConfig）
 
         public List<SelectedValue<AlertThresholdType>> AlertThresholdTypeList =>
             typeof(AlertThresholdType).GetDescriptionAndValue().Select(it => new SelectedValue<AlertThresholdType>
@@ -163,30 +156,6 @@ namespace GoldPriceWatch.ModelView
         {
             get => _config.ShowNotice;
             set { _config.ShowNotice = value; OnPropertyChanged(); }
-        }
-
-        public decimal PurchasePrice
-        {
-            get => _config.PurchasePrice;
-            set { if (_config.PurchasePrice != value) { _config.PurchasePrice = value; OnPropertyChanged(); } }
-        }
-
-        public decimal TotalGrams
-        {
-            get => _config.TotalGrams;
-            set { if (_config.TotalGrams != value) { _config.TotalGrams = value; OnPropertyChanged(); } }
-        }
-
-        public GoldUnit Unit
-        {
-            get => _config.Unit;
-            set { if (_config.Unit != value) { _config.Unit = value; OnPropertyChanged(); } }
-        }
-
-        public string Currency
-        {
-            get => _config.Currency;
-            set { if (_config.Currency != value) { _config.Currency = value; OnPropertyChanged(); } }
         }
 
         public decimal? TargetSellPrice
@@ -235,19 +204,6 @@ namespace GoldPriceWatch.ModelView
         {
             get => _config.EnableSettlementAlert;
             set { if (_config.EnableSettlementAlert != value) { _config.EnableSettlementAlert = value; OnPropertyChanged(); } }
-        }
-
-        public string NotificationChannelsString
-        {
-            get => string.Join(",", _config.NotificationChannels ?? Array.Empty<string>());
-            set
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                    _config.NotificationChannels = Array.Empty<string>();
-                else
-                    _config.NotificationChannels = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToArray();
-                OnPropertyChanged();
-            }
         }
         #endregion
 
