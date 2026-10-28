@@ -154,8 +154,43 @@
                                       SelectionMode="Single"
                                       VirtualizingPanel.IsVirtualizing="True"
                                       EnableRowVirtualization="True">
+                                <DataGrid.Resources>
+                                    <!-- 单元格内容统一深红色，左右内边距 -->
+                                    <Style x:Key="CellTextStyle" TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#FF8A2A2A"/>
+                                        <Setter Property="Padding" Value="4,0"/>
+                                    </Style>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="DataGridCell">
+                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            SnapsToDevicePixels="True">
+                                                        <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#FFFFF3D6"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#FFE0A83E"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                    <Style TargetType="DataGridRow">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#FFFFF3D6"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.Resources>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="时间" Binding="{Binding Time, StringFormat=MM-dd HH:mm}" Width="Auto" MinWidth="90"/>
+                                    <DataGridTextColumn Header="时间" Binding="{Binding Time, StringFormat=MM-dd HH:mm}" Width="Auto" MinWidth="90"
+                                                        ElementStyle="{StaticResource CellTextStyle}"/>
                                     <DataGridTextColumn Header="方向" Binding="{Binding SideText}" Width="Auto" MinWidth="50">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
@@ -164,27 +199,12 @@
                                             </Style>
                                         </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Header="价格" Binding="{Binding Price, StringFormat=F2}" Width="Auto" MinWidth="70">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Padding" Value="4,0"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                    <DataGridTextColumn Header="克重" Binding="{Binding Weight, StringFormat=F4}" Width="Auto" MinWidth="80">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Padding" Value="4,0"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                    <DataGridTextColumn Header="金额" Binding="{Binding Amount, StringFormat=F2}" Width="*">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Padding" Value="4,0"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="价格" Binding="{Binding Price, StringFormat=F2}" Width="Auto" MinWidth="70"
+                                                        ElementStyle="{StaticResource CellTextStyle}"/>
+                                    <DataGridTextColumn Header="克重" Binding="{Binding Weight, StringFormat=F4}" Width="Auto" MinWidth="80"
+                                                        ElementStyle="{StaticResource CellTextStyle}"/>
+                                    <DataGridTextColumn Header="金额" Binding="{Binding Amount, StringFormat=F2}" Width="*"
+                                                        ElementStyle="{StaticResource CellTextStyle}"/>
                                     <DataGridTemplateColumn Header="操作" Width="Auto" MinWidth="70">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
