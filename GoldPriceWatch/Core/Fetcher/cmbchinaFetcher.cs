@@ -22,7 +22,14 @@ namespace GoldPriceWatch.Core.Fetcher
                 var result = await (await Constants.cmbchinaAPI.GetAsync())
                 .GetJsonAsync<cmbchinaResult>();
 
-                var data = result.body.data[0];
+                // data 数组可能包含多个品种（Au T+D、Ag T+D、Au9999 等），且顺序不固定。
+                // URL 参数 no=AUTD 并不能保证返回数组首项就是 AUTD，必须按 variety 过滤。
+                var data = result.body.data?.FirstOrDefault(d =>
+                    string.Equals(d.variety, "AUTD", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(d.goldNo, "AUTD", StringComparison.OrdinalIgnoreCase));
+                if (data == null)
+                    throw new Exception("cmbchina: no AUTD entry in data array");
+
                 return new GoldResult
                 {
                     Source = "招商银行",

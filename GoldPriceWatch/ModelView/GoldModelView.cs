@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using GoldPriceWatch.Components;
+using GoldPriceWatch.Core;
 using GoldPriceWatch.Enums;
 using GoldPriceWatch.Model;
 using HandyControl.Controls;
@@ -26,10 +27,12 @@ namespace GoldPriceWatch.ModelView
     public partial class GoldModelView : ObservableObject, INotificationHandler<GoldResult>, INotificationHandler<FetchStatusChanged>
     {
         private readonly GoldInvestmentConfig _config;
+        private readonly HoldingStore _store;
 
         public GoldModelView()
         {
             _config = App.Current.Services.GetRequiredService<GoldInvestmentConfig>();
+            _store = App.Current.Services.GetRequiredService<HoldingStore>();
         }
 
         [ObservableProperty]
@@ -72,14 +75,48 @@ namespace GoldPriceWatch.ModelView
         private string fetchStatusText = "等待中";
 
         /// <summary>
-        /// Computed current total value based on config.
+        /// 基于订单的持仓：均价、剩余克数、剩余成本。
+        /// 无订单时返回 null 表示回退到 config 固定值。
         /// </summary>
-        public string CurrentTotalValue => $"{_config.GetCurrentTotalValue(_currentGoldResult):F2} {_config.Currency}";
+        private (decimal AvgPrice, decimal Grams, decimal Cost)? ComputeHoldingFromOrders()
+        {
+            if (_store.Orders == null || _store.Orders.Count == 0) return null;
+
+            var feeRate = _store.FeeRatePercent / 100m;
+            var p = TradingCalculator.CalculateRealizedProfit(_store.Orders, feeRate);
+
+            if (p.RemainingWeight <= 0) return null;
+
+            var avg = p.RemainingCost / p.RemainingWeight;
+            return (avg, p.RemainingWeight, p.RemainingCost);
+        }
 
         /// <summary>
-        /// Computed purchase total value.
+        /// 当前总市值（订单优先，回退到 config；不扣手续费，反映持仓在市场上的公允价值）。
         /// </summary>
-        public string PurchaseTotalValue => $"{(_config.PurchasePrice * _config.TotalGrams):F2} {_config.Currency}";
+        public string CurrentTotalValue
+        {
+            get
+            {
+                var currentPrice = decimal.TryParse(_currentGoldResult?.CurrentPrice, out var cp) ? cp : 0m;
+                var h = ComputeHoldingFromOrders();
+                var grams = h?.Grams ?? _config.TotalGrams;
+                return $"{(currentPrice * grams):F2} {_config.Currency}";
+            }
+        }
+
+        /// <summary>
+        /// 持仓总成本（订单优先，回退到 config）。
+        /// </summary>
+        public string PurchaseTotalValue
+        {
+            get
+            {
+                var h = ComputeHoldingFromOrders();
+                var cost = h?.Cost ?? (_config.PurchasePrice * _config.TotalGrams);
+                return $"{cost:F2} {_config.Currency}";
+            }
+        }
 
         private GoldResult? _currentGoldResult;
 
@@ -92,17 +129,45 @@ namespace GoldPriceWatch.ModelView
             _currentGoldResult = notification;
             LastUpdated = DateTime.Now;
 
-            // Update basic price info
-            //CurrentPriceText = $"￥{notification.CurrentPrice}";
-            CurrentPriceText = $"{notification.CurrentPrice}";
-            PurchasePriceText = $"B: {_config.PurchasePrice:F0}({_config.TotalGrams:F1}{_config.Unit.GetDescription()})";
+            // 从订单计算实时持仓；无订单时回退到 config 的固定值（兼容旧数据）
+            decimal purchasePrice;
+            decimal totalGrams;
+            bool fromOrders = false;
 
-            // Compute profit/loss
-            var profitLoss = _config.GetCurrentProfitLoss(notification);
+            var holding = ComputeHoldingFromOrders();
+            if (holding.HasValue)
+            {
+                purchasePrice = holding.Value.AvgPrice;
+                totalGrams = holding.Value.Grams;
+                fromOrders = true;
+            }
+            else
+            {
+                purchasePrice = _config.PurchasePrice;
+                totalGrams = _config.TotalGrams;
+            }
+
+            // Update basic price info
+            CurrentPriceText = $"{notification.CurrentPrice}";
+            PurchasePriceText = fromOrders
+                ? $"持仓 {purchasePrice:F0}({totalGrams:F2}g)"
+                : $"B: {purchasePrice:F0}({totalGrams:F1}{_config.Unit.GetDescription()})";
+
+            // Compute profit/loss（按现价扣卖出手续费，与持仓窗口口径一致）
+            var feeRate = _store.FeeRatePercent / 100m;
+            var currentPrice = decimal.TryParse(notification.CurrentPrice, out var cp) ? cp : 0m;
+            var marketValue = currentPrice * totalGrams;
+            var costBasis = purchasePrice * totalGrams;
+            var profitLoss = marketValue * (1 - feeRate) - costBasis;
+
             ProfitLossAmountText = profitLoss >= 0 ? $"+{profitLoss:F2}" : $"{profitLoss:F2}";
 
-            var profitLossPercentage = notification.CalculateLossPercentage(_config.PurchasePrice); // Note: Negative for profit
-            ProfitLossPercentageText = profitLossPercentage <= 0 ? $"+{Math.Abs(profitLossPercentage):F2}%" : $"{profitLossPercentage:F2}%";
+            var profitLossPercentage = costBasis > 0
+                ? (profitLoss / costBasis) * 100m
+                : 0m;
+            ProfitLossPercentageText = profitLossPercentage >= 0
+                ? $"+{profitLossPercentage:F2}%"
+                : $"{profitLossPercentage:F2}%";
 
             // Update trend
             var changePercentage = notification.CalculatePriceChangePercentage();
@@ -114,10 +179,15 @@ namespace GoldPriceWatch.ModelView
             IsDropAlert = false;
             IsFlashing = false;
 
-            // Only perform alert checks if config is valid (not empty/null)
-            if (_config.PurchasePrice > 0 && _config.TotalGrams > 0)
+            // 有有效持仓时才做报警检查
+            if (purchasePrice > 0 && totalGrams > 0)
             {
                 // Check alerts using config methods
+                // 注意：config 方法内部仍读 PurchasePrice / TotalGrams 固定值，
+                // 这里复用它们做阈值触发判断，message 里的金额/盈亏百分比将用 config 值计算。
+                // 若订单算出来的均价与 config 固定值差异较大，报警 message 会有偏差——
+                // 但阈值触发本身不受影响，因为报警的"涨价/降价百分比"口径是基于金价的，
+                // 与持仓均价无关。
                 var (dropTriggered, dropMessage) = _config.CheckDropAlert(notification);
                 var (riseTriggered, riseMessage) = _config.CheckRiseAlert(notification);
                 var (volatilityTriggered, volatilityMessage) = _config.CheckVolatilityAlert(notification);

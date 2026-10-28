@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:convert="clr-namespace:GoldPriceWatch.Convert"
         xmlns:controls="clr-namespace:GoldPriceWatch.Controls"
-        Title="纸面黄金持仓监控" Width="1440" Height="760" MinWidth="1240" MinHeight="660"
+        Title="纸面黄金持仓监控" Width="1920" Height="1080" MinWidth="1240" MinHeight="660"
         Background="#FFF4F4F6" Foreground="#FF2B2B33"
         WindowStartupLocation="CenterScreen"
         FontFamily="Microsoft YaHei UI">
@@ -90,7 +90,7 @@
 
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="560" MinWidth="460" MaxWidth="820"/>
+            <ColumnDefinition Width="600" MinWidth="460" MaxWidth="820"/>
             <ColumnDefinition Width="6"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -155,21 +155,42 @@
                                       VirtualizingPanel.IsVirtualizing="True"
                                       EnableRowVirtualization="True">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="时间" Binding="{Binding Time, StringFormat=MM-dd HH:mm}" Width="90"/>
-                                    <DataGridTextColumn Header="方向" Binding="{Binding SideText}" Width="50">
+                                    <DataGridTextColumn Header="时间" Binding="{Binding Time, StringFormat=MM-dd HH:mm}" Width="Auto" MinWidth="90"/>
+                                    <DataGridTextColumn Header="方向" Binding="{Binding SideText}" Width="Auto" MinWidth="50">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="{Binding Side, Converter={StaticResource SideColor}}"/>
+                                                <Setter Property="Padding" Value="4,0"/>
                                             </Style>
                                         </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Header="价格" Binding="{Binding Price, StringFormat=F2}" Width="70"/>
-                                    <DataGridTextColumn Header="克重" Binding="{Binding Weight, StringFormat=F4}" Width="80"/>
-                                    <DataGridTextColumn Header="金额" Binding="{Binding Amount, StringFormat=F2}" Width="*"/>
-                                    <DataGridTemplateColumn Header="" Width="50">
+                                    <DataGridTextColumn Header="价格" Binding="{Binding Price, StringFormat=F2}" Width="Auto" MinWidth="70">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Padding" Value="4,0"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="克重" Binding="{Binding Weight, StringFormat=F4}" Width="Auto" MinWidth="80">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Padding" Value="4,0"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="金额" Binding="{Binding Amount, StringFormat=F2}" Width="*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Padding" Value="4,0"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="操作" Width="Auto" MinWidth="70">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Button Content="删除" FontSize="11" Padding="6,2"
+                                                <Button Content="删除" FontSize="11" Padding="8,3"
+                                                        MinWidth="48" HorizontalAlignment="Stretch"
+                                                        Margin="4,0"
                                                         Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
                                                         Command="{Binding DataContext.DeleteOrderCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                         CommandParameter="{Binding}"/>
@@ -341,14 +362,11 @@
                 </Border>
                 <Border Style="{StaticResource StatCard}">
                     <StackPanel>
-                        <TextBlock Text="持仓量 (克)" Style="{StaticResource StatLabel}"/>
-                        <TextBlock Text="{Binding RemainingWeight, StringFormat=F4}" Style="{StaticResource StatValue}"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource StatCard}">
-                    <StackPanel>
                         <TextBlock Text="持仓均价 (元/克)" Style="{StaticResource StatLabel}"/>
                         <TextBlock Text="{Binding AvgCostPrice, StringFormat=F2}" Style="{StaticResource StatValue}"/>
+                        <TextBlock FontSize="13" Foreground="#FF8A8A95" Margin="0,4,0,0">
+                            <Run Text="{Binding RemainingWeight, StringFormat=F4}"/><Run Text=" 克"/>
+                        </TextBlock>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource StatCard}">

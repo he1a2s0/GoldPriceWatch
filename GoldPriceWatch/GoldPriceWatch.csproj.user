@@ -12,15 +12,9 @@
     <Compile Update="Components\AppNotification.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="GoldInvestmentWindow.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Components\AppNotification.xaml">
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Update="GoldInvestmentWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="MainWindow.xaml">

@@ -27,7 +27,7 @@ namespace GoldPriceWatch.ModelView
     /// </summary>
     public partial class HoldingViewModel : ObservableObject, INotificationHandler<GoldResult>
     {
-        private readonly HoldingStore _store = HoldingStore.Load();
+        private readonly HoldingStore _store;
         private readonly GoldInvestmentConfig _config;
 
         // 提醒状态：越过阈值后置位，回到区间内复位，避免重复弹窗
@@ -40,6 +40,7 @@ namespace GoldPriceWatch.ModelView
 
         public HoldingViewModel()
         {
+            _store = App.Current.Services.GetRequiredService<HoldingStore>();
             _config = App.Current.Services.GetRequiredService<GoldInvestmentConfig>();
             Orders = new ObservableCollection<OrderRecord>(_store.Orders.OrderBy(o => o.Time));
             PriceHistory = new ObservableCollection<PricePoint>(_store.PriceHistory.OrderBy(p => p.Time));

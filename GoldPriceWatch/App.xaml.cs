@@ -48,6 +48,7 @@ namespace GoldPriceWatch
                     services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(App).Assembly));
                     // 注册 Config
                     services.AddSingleton<GoldInvestmentConfig>(new GoldInvestmentConfig());
+                    services.AddSingleton<GoldPriceWatch.Core.HoldingStore>(GoldPriceWatch.Core.HoldingStore.Load());
                     services.AddSingleton<GoldModelView>();
                     services.AddSingleton<INotificationHandler<GoldResult>>(provide => provide.GetRequiredService<GoldModelView>());
                     services.AddSingleton<INotificationHandler<FetchStatusChanged>>(provide => provide.GetRequiredService<GoldModelView>());
