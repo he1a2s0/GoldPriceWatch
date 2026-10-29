@@ -150,7 +150,7 @@ namespace GoldPriceWatch.ModelView
             // Update basic price info
             CurrentPriceText = $"{notification.CurrentPrice}";
             PurchasePriceText = fromOrders
-                ? $"持仓 {purchasePrice:F0}({totalGrams:F2}g)"
+                ? $"{purchasePrice:F0}({totalGrams:F2}g)"
                 : $"B: {purchasePrice:F0}({totalGrams:F1}{_config.Unit.GetDescription()})";
 
             // Compute profit/loss（按现价扣卖出手续费，与持仓窗口口径一致）

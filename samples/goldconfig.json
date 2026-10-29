@@ -1,0 +1,21 @@
+{
+  "showNotice": false,
+  "purchasePrice": 480,
+  "totalGrams": 10,
+  "unit": "Gram",
+  "currency": "CNY",
+  "targetSellPrice": null,
+  "stopLossPrice": null,
+  "dropAlertType": "Percentage",
+  "dropAlertThreshold": 1000.00,
+  "riseAlertType": "Percentage",
+  "riseAlertThreshold": 1000.00,
+  "volatilityThreshold": 2,
+  "enableSettlementAlert": false,
+  "notificationChannels": [
+    "Console"
+  ],
+  "mainWindowLeft": 3929,
+  "mainWindowTop": 1027,
+  "refreshIntervalSeconds": 60
+}

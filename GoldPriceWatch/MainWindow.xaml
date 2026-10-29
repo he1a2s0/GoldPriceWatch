@@ -147,7 +147,10 @@
     </Window.Resources>
 
     <!-- Enhanced layout for more info while keeping compact -->
+    <!-- Background="#01FFFFFF"：alpha 非 0 才能在 AllowsTransparency 的分层窗口上命中鼠标；
+         视觉上近似全透明，保证整个悬浮框范围都可拖动 / 右键 -->
     <Border Style="{StaticResource AlertBorderStyle}"
+            Background="#01FFFFFF"
             BorderBrush="#E0E0E0">
         <Grid>
             <Grid.RowDefinitions>
