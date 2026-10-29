@@ -141,16 +141,37 @@ namespace GoldPriceWatch
 
         void Window_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            // 双击：切换持仓监控窗体显示/隐藏（与托盘双击一致）
+            if (e.ClickCount == 2)
+            {
+                if (App.Current.Services.GetService(typeof(Core.TrayIconService)) is Core.TrayIconService tray)
+                {
+                    tray.ToggleHolding();
+                }
+                e.Handled = true;
+                return;
+            }
+
             _pressedPosition = e.GetPosition(this);
         }
 
         void Window_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
-            if (Mouse.LeftButton == MouseButtonState.Pressed && _pressedPosition != e.GetPosition(this))
+            if (Mouse.LeftButton != MouseButtonState.Pressed)
             {
-                _isDragMoved = true;
-                DragMove();
+                return;
             }
+
+            // 超过系统拖动阈值才开始拖动，避免单击/双击时的微小位移误触发 DragMove
+            var current = e.GetPosition(this);
+            if (Math.Abs(current.X - _pressedPosition.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(current.Y - _pressedPosition.Y) < SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+
+            _isDragMoved = true;
+            DragMove();
         }
 
         void Window_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -183,6 +204,17 @@ namespace GoldPriceWatch
         private void MenuHideFloating_Click(object sender, RoutedEventArgs e)
         {
             Hide();
+        }
+
+        private void MenuExit_Click(object sender, RoutedEventArgs e)
+        {
+            // 与托盘菜单"退出"一致：先放开各窗口的关闭拦截，再退出并清理托盘图标
+            App.Current.IsShuttingDown = true;
+            if (App.Current.Services.GetService(typeof(Core.TrayIconService)) is Core.TrayIconService tray)
+            {
+                tray.Dispose();
+            }
+            Application.Current.Shutdown();
         }
     }
 }

@@ -198,6 +198,8 @@
                 <MenuItem Header="监控设置" Click="MenuOpenConfig_Click"/>
                 <MenuItem Header="打开持仓监控" Click="MenuOpenHolding_Click"/>
                 <MenuItem Header="隐藏悬浮框" Click="MenuHideFloating_Click"/>
+                <Separator/>
+                <MenuItem Header="退出" Click="MenuExit_Click"/>
             </ContextMenu>
         </Border.ContextMenu>
     </Border>
