@@ -146,12 +146,15 @@
                                 <TextBlock Grid.Column="1" Text="价格 (元/克)" Foreground="#FF8A8A95" Margin="8,0,0,0"/>
                                 <TextBlock Grid.Column="2" Text="克重 (g)" Foreground="#FF8A8A95" Margin="8,0,0,0"/>
                             </Grid>
+                            <!-- 行高由 DataGrid.RowHeight 控制；写在单元格模板里 Border 的 Height 不会影响行高 -->
                             <DataGrid Grid.Row="2" ItemsSource="{Binding Orders}" AutoGenerateColumns="False" CanUserAddRows="False"
                                       IsReadOnly="True" HeadersVisibility="Column"
+                                      RowHeight="30"
                                       Background="White" Foreground="#FF2B2B33"
                                       BorderBrush="#FFD8D8E0" RowBackground="White" AlternatingRowBackground="#FFF6F6F8"
                                       GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#FFE8E8EE"
                                       SelectionMode="Single"
+                                      FontSize="12"
                                       VirtualizingPanel.IsVirtualizing="True"
                                       EnableRowVirtualization="True">
                                 <DataGrid.Resources>
@@ -161,6 +164,8 @@
                                         <Setter Property="Padding" Value="4,0"/>
                                     </Style>
                                     <Style TargetType="DataGridCell">
+                                        <!-- 单元格内容垂直居中（ContentPresenter 在模板中绑定了 VerticalContentAlignment） -->
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="DataGridCell">
@@ -168,7 +173,8 @@
                                                             BorderBrush="{TemplateBinding BorderBrush}"
                                                             BorderThickness="{TemplateBinding BorderThickness}"
                                                             SnapsToDevicePixels="True">
-                                                        <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                        <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsSelected" Value="True">
@@ -208,7 +214,7 @@
                                     <DataGridTemplateColumn Header="操作" Width="Auto" MinWidth="70">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Button Content="删除" FontSize="11" Padding="8,3"
+                                                <Button Content="删除" FontSize="11" Padding="8,2"
                                                         MinWidth="48" HorizontalAlignment="Stretch"
                                                         Margin="4,0"
                                                         Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
