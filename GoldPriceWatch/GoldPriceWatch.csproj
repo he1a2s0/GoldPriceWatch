@@ -7,6 +7,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- 逐显示器 DPI 感知：见 app.manifest -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!--
+      WFAC010：WinForms 分析器建议改用 ApplicationHighDpiMode 配置 DPI。
+      本项目是 WPF 应用（WinForms 仅用于托盘 NotifyIcon），不会调用
+      ApplicationConfiguration.Initialize()，因此 DPI 感知只能通过清单声明。
+    -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
 
   <!-- 托盘图标依赖 WinForms；移除其隐式全局 using 以避开与 WPF 的类型冲突（Point/Color/Application 等） -->

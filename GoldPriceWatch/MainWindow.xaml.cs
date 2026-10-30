@@ -2,6 +2,7 @@ using GoldPriceWatch.Model;
 using GoldPriceWatch.ModelView;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -18,14 +19,65 @@ namespace GoldPriceWatch
         [DllImport("user32.dll")]
         private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
+
+        private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
+
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_NOACTIVATE = 0x0010;
 
         public static void HideFromAltTab(Window window)
         {
             var helper = new WindowInteropHelper(window);
             var exStyle = GetWindowLong(helper.Handle, GWL_EXSTYLE);
             SetWindowLong(helper.Handle, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
+        }
+
+        /// <summary>窗口在屏幕上的物理像素矩形。</summary>
+        public static RECT GetPhysicalRect(Window window)
+        {
+            GetWindowRect(new WindowInteropHelper(window).Handle, out var rect);
+            return rect;
+        }
+
+        /// <summary>各显示器在虚拟桌面中的物理像素矩形。</summary>
+        public static List<RECT> GetMonitorRects()
+        {
+            var monitors = new List<RECT>();
+            EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
+                (IntPtr hMonitor, IntPtr hdcMonitor, ref RECT rect, IntPtr dwData) =>
+                {
+                    monitors.Add(rect);
+                    return true;
+                }, IntPtr.Zero);
+            return monitors;
+        }
+
+        /// <summary>按物理像素移动窗口（不改尺寸、不改层级）。</summary>
+        public static void MoveToPhysical(Window window, int left, int top)
+        {
+            SetWindowPos(new WindowInteropHelper(window).Handle, IntPtr.Zero, left, top, 0, 0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         }
     }
 }
@@ -38,8 +90,9 @@ namespace GoldPriceWatch
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const double MinimumVisibleWidth = 60d;
-        private const double MinimumVisibleHeight = 40d;
+        // 至少保留可见的物理像素尺寸
+        private const int MinimumVisibleWidth = 60;
+        private const int MinimumVisibleHeight = 40;
 
         private readonly GoldInvestmentConfig _config;
         private GoldModelView? _viewModel;
@@ -81,10 +134,57 @@ namespace GoldPriceWatch
                 return;
             }
 
-            var position = GetSafeWindowPosition(_config.MainWindowLeft.Value, _config.MainWindowTop.Value);
-            WindowStartupLocation = WindowStartupLocation.Manual;
-            Left = position.X;
-            Top = position.Y;
+            // 位置以屏幕物理像素保存：逐显示器 DPI 感知下 DIP 与像素的换算随所在显示器变化，
+            // 用 DIP 保存的坐标换到另一块屏幕后会落到屏幕外（悬浮框"消失"）
+            var rect = WindowHelper.GetPhysicalRect(this);
+            var width = Math.Max(rect.Right - rect.Left, MinimumVisibleWidth);
+            var height = Math.Max(rect.Bottom - rect.Top, MinimumVisibleHeight);
+
+            var savedLeft = (int)_config.MainWindowLeft.Value;
+            var savedTop = (int)_config.MainWindowTop.Value;
+
+            var monitors = WindowHelper.GetMonitorRects();
+            if (monitors.Count == 0)
+            {
+                return;
+            }
+
+            // 选保存位置所在的显示器；不在任何显示器上时选距离最近的
+            var target = monitors[0];
+            long nearestDistance = long.MaxValue;
+            foreach (var monitor in monitors)
+            {
+                if (savedLeft >= monitor.Left && savedLeft < monitor.Right &&
+                    savedTop >= monitor.Top && savedTop < monitor.Bottom)
+                {
+                    target = monitor;
+                    break;
+                }
+
+                var dx = Math.Max(0, Math.Max(monitor.Left - savedLeft, savedLeft - monitor.Right));
+                var dy = Math.Max(0, Math.Max(monitor.Top - savedTop, savedTop - monitor.Bottom));
+                var distance = (long)dx * dx + (long)dy * dy;
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    target = monitor;
+                }
+            }
+
+            // 只在目标显示器内挪动，保证整个悬浮框可见
+            var maxLeft = Math.Max(target.Left, target.Right - width);
+            var maxTop = Math.Max(target.Top, target.Bottom - height);
+            var left = Math.Min(Math.Max(savedLeft, target.Left), maxLeft);
+            var top = Math.Min(Math.Max(savedTop, target.Top), maxTop);
+
+            WindowHelper.MoveToPhysical(this, left, top);
+
+            if (left != savedLeft || top != savedTop)
+            {
+                // 位置被修正过（例如显示器拔掉/换分辨率），回写修正后的坐标
+                _config.MainWindowLeft = left;
+                _config.MainWindowTop = top;
+            }
         }
 
         private void SaveWindowPosition()
@@ -94,46 +194,10 @@ namespace GoldPriceWatch
                 return;
             }
 
-            _config.MainWindowLeft = Left;
-            _config.MainWindowTop = Top;
-        }
-
-        private Point GetSafeWindowPosition(double left, double top)
-        {
-            var width = ActualWidth;
-            if (double.IsNaN(width) || width <= 0)
-            {
-                width = Width;
-            }
-            if (double.IsNaN(width) || width <= 0)
-            {
-                width = MinimumVisibleWidth;
-            }
-
-            var height = ActualHeight;
-            if (double.IsNaN(height) || height <= 0)
-            {
-                height = Height;
-            }
-            if (double.IsNaN(height) || height <= 0)
-            {
-                height = MinimumVisibleHeight;
-            }
-
-            var virtualLeft = SystemParameters.VirtualScreenLeft;
-            var virtualTop = SystemParameters.VirtualScreenTop;
-            var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
-            var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
-
-            var minLeft = virtualLeft - Math.Max(0d, width - MinimumVisibleWidth);
-            var maxLeft = virtualRight - MinimumVisibleWidth;
-            var minTop = virtualTop - Math.Max(0d, height - MinimumVisibleHeight);
-            var maxTop = virtualBottom - MinimumVisibleHeight;
-
-            var safeLeft = Math.Min(Math.Max(left, minLeft), maxLeft);
-            var safeTop = Math.Min(Math.Max(top, minTop), maxTop);
-
-            return new Point(safeLeft, safeTop);
+            // 同样按物理像素保存，避免跨 DPI 显示器时坐标失真
+            var rect = WindowHelper.GetPhysicalRect(this);
+            _config.MainWindowLeft = rect.Left;
+            _config.MainWindowTop = rect.Top;
         }
 
         Point _pressedPosition;
