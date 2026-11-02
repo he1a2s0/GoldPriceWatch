@@ -28,6 +28,18 @@ namespace GoldPriceWatch
         [DllImport("user32.dll")]
         private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern uint RegisterWindowMessage(string lpString);
+
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
+
+        /// <summary>二次启动时广播给已运行实例的消息：请求显示悬浮框。</summary>
+        public static readonly uint ShowFloatingMessage = RegisterWindowMessage("GoldPriceWatch.ShowFloating");
+
         private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
 
         [StructLayout(LayoutKind.Sequential)]
@@ -79,6 +91,18 @@ namespace GoldPriceWatch
             SetWindowPos(new WindowInteropHelper(window).Handle, IntPtr.Zero, left, top, 0, 0,
                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         }
+
+        /// <summary>请求已运行的实例显示悬浮框（用于单实例二次启动）。</summary>
+        public static void NotifyShowFloating()
+        {
+            // 悬浮框隐藏到托盘时窗口句柄仍然存在，可按标题定位后直接投递；
+            // 广播消息对隐藏窗口不可靠，故这里定向发送
+            var hwnd = FindWindow(null, "黄金价格监控");
+            if (hwnd != IntPtr.Zero)
+            {
+                PostMessage(hwnd, ShowFloatingMessage, IntPtr.Zero, IntPtr.Zero);
+            }
+        }
     }
 }
 
@@ -111,6 +135,25 @@ namespace GoldPriceWatch
         {
             WindowHelper.HideFromAltTab(this);
             RestoreWindowPosition();
+
+            // 二次启动的新进程会广播消息，由这里把已隐藏的悬浮框重新显示出来
+            if (PresentationSource.FromVisual(this) is HwndSource source)
+            {
+                source.AddHook(WndProc);
+            }
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WindowHelper.ShowFloatingMessage)
+            {
+                Show();
+                WindowState = WindowState.Normal;
+                Activate();
+                handled = true;
+            }
+
+            return IntPtr.Zero;
         }
 
         private void MainWindow_Closing(object? sender, CancelEventArgs e)

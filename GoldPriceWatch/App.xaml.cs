@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading;
 using System.Windows;
 
 namespace GoldPriceWatch
@@ -17,6 +18,13 @@ namespace GoldPriceWatch
     public partial class App : Application
     {
         private readonly IHost _host;
+
+        /// <summary>
+        /// 单实例互斥量（Local\ 前缀：同一登录会话内唯一，多用户互不影响）
+        /// </summary>
+        private Mutex? _singleInstanceMutex;
+
+        private const string SingleInstanceMutexName = @"Local\GoldPriceWatch.SingleInstance";
         /// <summary>
         /// 获取当前 App 实例
         /// </summary>
@@ -72,6 +80,17 @@ namespace GoldPriceWatch
         {
             base.OnStartup(e);
 
+            // 单实例：已运行则请求原实例把悬浮框显示出来，本进程直接退出
+            _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out var isFirstInstance);
+            if (!isFirstInstance)
+            {
+                _singleInstanceMutex.Dispose();
+                _singleInstanceMutex = null;
+                WindowHelper.NotifyShowFloating();
+                Shutdown();
+                return;
+            }
+
             try
             {
                 // 启动主机，运行所有托管服务
@@ -89,6 +108,12 @@ namespace GoldPriceWatch
                 MessageBox.Show($"Startup error: {ex.Message}");
                 Shutdown();
             }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _singleInstanceMutex?.Dispose();
+            base.OnExit(e);
         }
     }
 
