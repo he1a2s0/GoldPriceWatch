@@ -33,6 +33,8 @@ namespace GoldPriceWatch.ModelView
         {
             _config = App.Current.Services.GetRequiredService<GoldInvestmentConfig>();
             _store = App.Current.Services.GetRequiredService<HoldingStore>();
+            // 订单/费率变化时实时刷新悬浮框的持仓与盈亏显示
+            _store.OrdersChanged += OnOrdersChanged;
         }
 
         [ObservableProperty]
@@ -76,44 +78,41 @@ namespace GoldPriceWatch.ModelView
 
         /// <summary>
         /// 基于订单的持仓：均价、剩余克数、剩余成本。
-        /// 无订单时返回 null 表示回退到 config 固定值。
+        /// 与持仓监控窗口共用同一套订单数据与算法（TradingCalculator），保证两处口径一致；
+        /// 无订单时为 0 持仓，不再回退到 config 的旧固定值（那会与持仓监控显示不一致）。
         /// </summary>
-        private (decimal AvgPrice, decimal Grams, decimal Cost)? ComputeHoldingFromOrders()
+        private (decimal AvgPrice, decimal Grams, decimal Cost) GetHolding()
         {
-            if (_store.Orders == null || _store.Orders.Count == 0) return null;
+            if (_store.Orders == null || _store.Orders.Count == 0) return (0m, 0m, 0m);
 
             var feeRate = _store.FeeRatePercent / 100m;
             var p = TradingCalculator.CalculateRealizedProfit(_store.Orders, feeRate);
 
-            if (p.RemainingWeight <= 0) return null;
-
-            var avg = p.RemainingCost / p.RemainingWeight;
+            var avg = p.RemainingWeight > 0 ? p.RemainingCost / p.RemainingWeight : 0m;
             return (avg, p.RemainingWeight, p.RemainingCost);
         }
 
         /// <summary>
-        /// 当前总市值（订单优先，回退到 config；不扣手续费，反映持仓在市场上的公允价值）。
+        /// 当前总市值（不扣手续费，反映持仓在市场上的公允价值）。
         /// </summary>
         public string CurrentTotalValue
         {
             get
             {
                 var currentPrice = decimal.TryParse(_currentGoldResult?.CurrentPrice, out var cp) ? cp : 0m;
-                var h = ComputeHoldingFromOrders();
-                var grams = h?.Grams ?? _config.TotalGrams;
+                var grams = GetHolding().Grams;
                 return $"{(currentPrice * grams):F2} {_config.Currency}";
             }
         }
 
         /// <summary>
-        /// 持仓总成本（订单优先，回退到 config）。
+        /// 持仓总成本（剩余持仓成本）。
         /// </summary>
         public string PurchaseTotalValue
         {
             get
             {
-                var h = ComputeHoldingFromOrders();
-                var cost = h?.Cost ?? (_config.PurchasePrice * _config.TotalGrams);
+                var cost = GetHolding().Cost;
                 return $"{cost:F2} {_config.Currency}";
             }
         }
@@ -129,45 +128,12 @@ namespace GoldPriceWatch.ModelView
             _currentGoldResult = notification;
             LastUpdated = DateTime.Now;
 
-            // 从订单计算实时持仓；无订单时回退到 config 的固定值（兼容旧数据）
-            decimal purchasePrice;
-            decimal totalGrams;
-            bool fromOrders = false;
-
-            var holding = ComputeHoldingFromOrders();
-            if (holding.HasValue)
-            {
-                purchasePrice = holding.Value.AvgPrice;
-                totalGrams = holding.Value.Grams;
-                fromOrders = true;
-            }
-            else
-            {
-                purchasePrice = _config.PurchasePrice;
-                totalGrams = _config.TotalGrams;
-            }
+            // 与持仓监控窗口一致：只用订单计算的持仓
+            var totalGrams = GetHolding().Grams;
 
             // Update basic price info
             CurrentPriceText = $"{notification.CurrentPrice}";
-            PurchasePriceText = fromOrders
-                ? $"{purchasePrice:F0}({totalGrams:F2}g)"
-                : $"B: {purchasePrice:F0}({totalGrams:F1}{_config.Unit.GetDescription()})";
-
-            // Compute profit/loss（按现价扣卖出手续费，与持仓窗口口径一致）
-            var feeRate = _store.FeeRatePercent / 100m;
-            var currentPrice = decimal.TryParse(notification.CurrentPrice, out var cp) ? cp : 0m;
-            var marketValue = currentPrice * totalGrams;
-            var costBasis = purchasePrice * totalGrams;
-            var profitLoss = marketValue * (1 - feeRate) - costBasis;
-
-            ProfitLossAmountText = profitLoss >= 0 ? $"+{profitLoss:F2}" : $"{profitLoss:F2}";
-
-            var profitLossPercentage = costBasis > 0
-                ? (profitLoss / costBasis) * 100m
-                : 0m;
-            ProfitLossPercentageText = profitLossPercentage >= 0
-                ? $"+{profitLossPercentage:F2}%"
-                : $"{profitLossPercentage:F2}%";
+            UpdateHoldingDisplay(notification);
 
             // Update trend
             var changePercentage = notification.CalculatePriceChangePercentage();
@@ -179,8 +145,8 @@ namespace GoldPriceWatch.ModelView
             IsDropAlert = false;
             IsFlashing = false;
 
-            // 有有效持仓时才做报警检查
-            if (purchasePrice > 0 && totalGrams > 0)
+            // 有持仓时才做报警检查
+            if (totalGrams > 0)
             {
                 // Check alerts using config methods
                 // 注意：config 方法内部仍读 PurchasePrice / TotalGrams 固定值，
@@ -224,6 +190,51 @@ namespace GoldPriceWatch.ModelView
             // Notify UI updates
             OnPropertyChanged(nameof(CurrentTotalValue));
             OnPropertyChanged(nameof(PurchaseTotalValue));
+        }
+
+        /// <summary>
+        /// 根据最新价格与订单重新计算并刷新持仓均价、剩余克数与盈亏显示。
+        /// 价格通知与订单变更事件都会调用本方法，保证悬浮框实时反映持仓变化。
+        /// </summary>
+        private void UpdateHoldingDisplay(GoldResult notification)
+        {
+            var (purchasePrice, totalGrams, costBasis) = GetHolding();
+
+            // 与持仓监控窗口口径一致：均价两位小数、克数四位小数
+            PurchasePriceText = $"{purchasePrice:F2}({totalGrams:F4}g)";
+
+            // Compute profit/loss（按现价扣卖出手续费，与持仓窗口口径一致）
+            var feeRate = _store.FeeRatePercent / 100m;
+            var currentPrice = decimal.TryParse(notification.CurrentPrice, out var cp) ? cp : 0m;
+            var marketValue = currentPrice * totalGrams;
+            var profitLoss = marketValue * (1 - feeRate) - costBasis;
+
+            ProfitLossAmountText = profitLoss >= 0 ? $"+{profitLoss:F2}" : $"{profitLoss:F2}";
+
+            var profitLossPercentage = costBasis > 0
+                ? (profitLoss / costBasis) * 100m
+                : 0m;
+            ProfitLossPercentageText = profitLossPercentage >= 0
+                ? $"+{profitLossPercentage:F2}%"
+                : $"{profitLossPercentage:F2}%";
+
+            OnPropertyChanged(nameof(CurrentTotalValue));
+            OnPropertyChanged(nameof(PurchaseTotalValue));
+        }
+
+        /// <summary>订单/费率变化时用最新价格重算持仓与盈亏。</summary>
+        private void OnOrdersChanged(object? sender, EventArgs e)
+        {
+            if (_currentGoldResult == null) return;
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.InvokeAsync(() => UpdateHoldingDisplay(_currentGoldResult));
+                return;
+            }
+
+            UpdateHoldingDisplay(_currentGoldResult);
         }
 
         public Task Handle(FetchStatusChanged notification, CancellationToken cancellationToken)

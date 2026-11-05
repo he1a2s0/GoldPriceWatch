@@ -21,6 +21,13 @@ namespace GoldPriceWatch.Core
 
         public List<OrderRecord> Orders { get; set; } = new();
 
+        /// <summary>订单或费率等持仓相关数据变化时触发，供悬浮框等订阅方实时刷新。</summary>
+        public event EventHandler? OrdersChanged;
+
+        /// <summary>由调用方在持仓数据变更后手动触发。</summary>
+        public void NotifyOrdersChanged() => OrdersChanged?.Invoke(this, EventArgs.Empty);
+
+
         /// <summary>卖出费率（百分比，默认 0.4%）。</summary>
         public decimal FeeRatePercent { get; set; } = 0.4m;
 

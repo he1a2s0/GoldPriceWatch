@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using GoldPriceWatch.Model;
@@ -35,7 +36,8 @@ namespace GoldPriceWatch.Core
             result.GrossProceeds = sells.Sum(x => x.Price * x.Weight);
             result.TotalFees = result.GrossProceeds * feeRate;
 
-            result.RemainingWeight = result.TotalBuyWeight - result.TotalSellWeight;
+            // 卖出重量可能因录入误差略超买入重量，剩余持仓按 0 计，避免出现负持仓/负成本
+            result.RemainingWeight = Math.Max(0, result.TotalBuyWeight - result.TotalSellWeight);
             if (result.TotalBuyWeight > 0)
             {
                 result.RemainingCost = result.TotalCost * (result.RemainingWeight / result.TotalBuyWeight);

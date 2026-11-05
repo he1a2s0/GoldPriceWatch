@@ -93,6 +93,7 @@ namespace GoldPriceWatch.ModelView
             NewWeight = string.Empty;
             Persist();
             Recalculate();
+            _store.NotifyOrdersChanged();
         }
 
         [RelayCommand]
@@ -102,6 +103,7 @@ namespace GoldPriceWatch.ModelView
             Orders.Remove(order);
             Persist();
             Recalculate();
+            _store.NotifyOrdersChanged();
         }
 
         /// <summary>立即刷新：直接触发一次取价（与后台循环共用同一管道）。</summary>
@@ -121,6 +123,7 @@ namespace GoldPriceWatch.ModelView
         {
             Persist();
             Recalculate();
+            _store.NotifyOrdersChanged();
         }
 
         [ObservableProperty]
