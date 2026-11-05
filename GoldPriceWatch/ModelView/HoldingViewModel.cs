@@ -72,25 +72,29 @@ namespace GoldPriceWatch.ModelView
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
-        private string newWeight = string.Empty;
+        private string newAmount = string.Empty;
 
         private bool CanAddOrder() =>
             decimal.TryParse(NewPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out var p) && p > 0 &&
-            decimal.TryParse(NewWeight, NumberStyles.Any, CultureInfo.InvariantCulture, out var w) && w > 0;
+            decimal.TryParse(NewAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var a) && a > 0;
 
         [RelayCommand(CanExecute = nameof(CanAddOrder))]
         private void AddOrder()
         {
+            var price = decimal.Parse(NewPrice, CultureInfo.InvariantCulture);
+            var amount = decimal.Parse(NewAmount, CultureInfo.InvariantCulture);
             var order = new OrderRecord
             {
                 Side = NewIsBuy ? OrderSide.Buy : OrderSide.Sell,
-                Price = decimal.Parse(NewPrice, CultureInfo.InvariantCulture),
-                Weight = decimal.Parse(NewWeight, CultureInfo.InvariantCulture),
+                Price = price,
+                // 克重由总价 / 单价反推，保持金额精度
+                Weight = price > 0 ? amount / price : 0m,
+                Amount = amount,
                 Time = DateTime.Now
             };
             Orders.Add(order);
             NewPrice = string.Empty;
-            NewWeight = string.Empty;
+            NewAmount = string.Empty;
             Persist();
             Recalculate();
             _store.NotifyOrdersChanged();
