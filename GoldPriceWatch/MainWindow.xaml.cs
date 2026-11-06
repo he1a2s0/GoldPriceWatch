@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -127,8 +128,40 @@ namespace GoldPriceWatch
             DataContext = _viewModel = MainModel;
             _config = config;
 
+            // 应用记忆的悬浮框文本透明度（只作用于内容，不动窗体背景层，避免影响鼠标命中）
+            ApplyFloatingOpacity();
+
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
+            PreviewMouseWheel += Window_PreviewMouseWheel;
+        }
+
+        /// <summary>把配置中的透明度应用到悬浮框内容（文本），窗体背景与命中区域不受影响。</summary>
+        public void ApplyFloatingOpacity()
+        {
+            ContentRoot.Opacity = _config.FloatingOpacity;
+        }
+
+        /// <summary>按住 Ctrl 滚动滚轮：调整悬浮框透明度（每格 5%），并写入配置记忆。</summary>
+        private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == 0)
+            {
+                return;
+            }
+
+            var delta = e.Delta > 0 ? 0.05 : -0.05;
+            _config.FloatingOpacity += delta; // setter 内夹取 0.3~1.0 并持久化
+            ApplyFloatingOpacity();
+
+            // 监控提醒页开着时让透明度滑块同步
+            if (Application.Current.Windows.OfType<HoldingWindow>().FirstOrDefault()?.DataContext
+                is HoldingViewModel holdingVm)
+            {
+                holdingVm.RefreshFloatingOpacity();
+            }
+
+            e.Handled = true;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)

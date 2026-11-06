@@ -299,6 +299,20 @@
                             </StackPanel>
                         </GroupBox>
 
+                        <!-- 悬浮框 -->
+                        <GroupBox Header="悬浮框" Style="{StaticResource GroupStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="文本透明度" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <Slider Width="180" Minimum="30" Maximum="100" VerticalAlignment="Center"
+                                        TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Value="{Binding FloatingOpacityPercent}"/>
+                                <TextBlock Text="{Binding FloatingOpacityPercent, StringFormat={}{0:0}%}"
+                                           VerticalAlignment="Center" Margin="10,0,0,0" MinWidth="38"/>
+                                <TextBlock Text="按住 Ctrl + 滚轮也可直接在悬浮框上调整" Foreground="#FF8A8A95"
+                                           FontSize="11" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
                         <!-- 卖出/止损目标 -->
                         <GroupBox Header="卖出 / 止损目标价" Style="{StaticResource GroupStyle}">
                             <Grid>

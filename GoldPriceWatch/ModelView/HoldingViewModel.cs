@@ -232,6 +232,29 @@ namespace GoldPriceWatch.ModelView
 
         partial void OnRefreshIntervalSecondsChanged(int value) => _config.RefreshIntervalSeconds = value;
 
+        /// <summary>悬浮框透明度（百分比 30~100）。修改后立即应用到悬浮框并由配置持久化。</summary>
+        public double FloatingOpacityPercent
+        {
+            get => _config.FloatingOpacity * 100;
+            set
+            {
+                _config.FloatingOpacity = value / 100;
+                OnPropertyChanged();
+                ApplyFloatingOpacity();
+            }
+        }
+
+        /// <summary>外部（悬浮框 Ctrl+滚轮）调整透明度后，刷新本属性的显示。</summary>
+        public void RefreshFloatingOpacity() => OnPropertyChanged(nameof(FloatingOpacityPercent));
+
+        private void ApplyFloatingOpacity()
+        {
+            foreach (var window in Application.Current.Windows.OfType<MainWindow>())
+            {
+                window.ApplyFloatingOpacity();
+            }
+        }
+
         [ObservableProperty]
         private bool alertEnabled;
 

@@ -41,6 +41,7 @@ namespace GoldPriceWatch.Model
         private string[] _notificationChannels = { "Console" };
         private double? _mainWindowLeft;
         private double? _mainWindowTop;
+        private double _floatingOpacity = 1.0;
         private int _refreshIntervalSeconds = 10;
 
         /// <summary>
@@ -336,6 +337,24 @@ namespace GoldPriceWatch.Model
                 if (_mainWindowLeft != value)
                 {
                     _mainWindowLeft = value;
+                    if (!_isLoading) SaveToFile();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 悬浮框透明度（0.3~1.0，1.0 为不透明）。超出范围时自动夹取。
+        /// </summary>
+        [JsonPropertyName("floatingOpacity")]
+        public double FloatingOpacity
+        {
+            get => _floatingOpacity;
+            set
+            {
+                var clamped = Math.Min(1.0, Math.Max(0.3, value));
+                if (_floatingOpacity != clamped)
+                {
+                    _floatingOpacity = clamped;
                     if (!_isLoading) SaveToFile();
                 }
             }
