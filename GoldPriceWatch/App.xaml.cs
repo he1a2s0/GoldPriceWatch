@@ -57,6 +57,7 @@ namespace GoldPriceWatch
                     // 注册 Config
                     services.AddSingleton<GoldInvestmentConfig>(new GoldInvestmentConfig());
                     services.AddSingleton<GoldPriceWatch.Core.HoldingStore>(GoldPriceWatch.Core.HoldingStore.Load());
+                    services.AddSingleton<GoldPriceWatch.Core.HistoryStore>(GoldPriceWatch.Core.HistoryStore.Load());
                     services.AddSingleton<GoldModelView>();
                     services.AddSingleton<INotificationHandler<GoldResult>>(provide => provide.GetRequiredService<GoldModelView>());
                     services.AddSingleton<INotificationHandler<FetchStatusChanged>>(provide => provide.GetRequiredService<GoldModelView>());

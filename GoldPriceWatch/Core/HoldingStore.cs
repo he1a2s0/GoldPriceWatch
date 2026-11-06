@@ -41,6 +41,9 @@ namespace GoldPriceWatch.Core
 
         public List<PricePoint> PriceHistory { get; set; } = new();
 
+        /// <summary>右侧统计/图表面板是否已收起（记住上次的显示状态）。</summary>
+        public bool RightPanelCollapsed { get; set; }
+
         /// <summary>
         /// 一次性迁移用的刷新间隔（秒）。仅当从旧版 GoldMonitor 导入时填充，
         /// 由 HoldingViewModel 应用后清空；正常为空。

@@ -29,6 +29,7 @@ namespace GoldPriceWatch.ModelView
     {
         private readonly HoldingStore _store;
         private readonly GoldInvestmentConfig _config;
+        private readonly HistoryStore _history;
 
         // 提醒状态：越过阈值后置位，回到区间内复位，避免重复弹窗
         private bool _highAlertActive;
@@ -38,12 +39,28 @@ namespace GoldPriceWatch.ModelView
 
         public ObservableCollection<PricePoint> PriceHistory { get; }
 
+        public ObservableCollection<HistoryRecord> HistoryRecords { get; }
+
+        [ObservableProperty]
+        private HistoryRecord? selectedHistory;
+
+        /// <summary>保存历史记录的结果提示文本（如“已保存 2026-11-06_152334”）。</summary>
+        [ObservableProperty]
+        private string saveHistoryResultText = string.Empty;
+
+        /// <summary>结果提示是否可见，保存成功后显示 5 秒自动消失。</summary>
+        [ObservableProperty]
+        private bool isSaveHistoryResultVisible;
+
         public HoldingViewModel()
         {
             _store = App.Current.Services.GetRequiredService<HoldingStore>();
             _config = App.Current.Services.GetRequiredService<GoldInvestmentConfig>();
+            _history = App.Current.Services.GetRequiredService<HistoryStore>();
             Orders = new ObservableCollection<OrderRecord>(_store.Orders.OrderBy(o => o.Time));
             PriceHistory = new ObservableCollection<PricePoint>(_store.PriceHistory.OrderBy(p => p.Time));
+            HistoryRecords = new ObservableCollection<HistoryRecord>(
+                _history.Records.OrderByDescending(r => r.CreatedAt));
 
             feeRatePercent = _store.FeeRatePercent;
             alertEnabled = _store.AlertEnabled;
@@ -110,12 +127,92 @@ namespace GoldPriceWatch.ModelView
             _store.NotifyOrdersChanged();
         }
 
+        /// <summary>清空当前交易记录（是否二次确认由调用方决定），并同步刷新持仓显示。</summary>
+        public void ClearOrders()
+        {
+            if (Orders.Count == 0) return;
+            Orders.Clear();
+            Persist();
+            Recalculate();
+            _store.NotifyOrdersChanged();
+        }
+
         /// <summary>立即刷新：直接触发一次取价（与后台循环共用同一管道）。</summary>
         [RelayCommand]
         private async Task RefreshNowAsync()
         {
             var fetcher = App.Current.Services.GetRequiredService<LoopFetcherService>();
             await fetcher.Invoke(CancellationToken.None);
+        }
+        #endregion
+
+        #region 历史记录
+
+        /// <summary>
+        /// 把当前流水、费率、实时价格与价格历史存为一条快照。
+        /// 名称按 yyyy-MM-dd_HHmmss 自动生成；流水做深拷贝，后续增删不影响已存记录。
+        /// </summary>
+        [RelayCommand]
+        private void SaveCurrentAsHistory()
+        {
+            var now = DateTime.Now;
+            var record = new HistoryRecord
+            {
+                Name = now.ToString("yyyy-MM-dd_HHmmss"),
+                CreatedAt = now,
+                FeeRatePercent = FeeRatePercent,
+                CurrentPrice = CurrentPrice,
+                Orders = Orders.Select(o => new OrderRecord
+                {
+                    Id = o.Id,
+                    Side = o.Side,
+                    Price = o.Price,
+                    Weight = o.Weight,
+                    Amount = o.Amount,
+                    Time = o.Time
+                }).ToList(),
+                PriceHistory = PriceHistory.Select(p => new PricePoint { Time = p.Time, Price = p.Price }).ToList()
+            };
+
+            HistoryRecords.Insert(0, record);
+            SelectedHistory = record;
+            PersistHistory();
+
+            // 按钮左侧显示结果提示，5 秒后自动消失
+            SaveHistoryResultText = $"已保存 {record.Name}";
+            IsSaveHistoryResultVisible = true;
+            _ = HideSaveHistoryResultAfterDelayAsync();
+        }
+
+        /// <summary>延迟 5 秒隐藏保存结果提示；连续保存时旧任务不会提前关掉新提示。</summary>
+        private async Task HideSaveHistoryResultAfterDelayAsync()
+        {
+            var shownText = SaveHistoryResultText;
+            await Task.Delay(5000);
+            if (SaveHistoryResultText != shownText) return;
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                _ = dispatcher.InvokeAsync(() => IsSaveHistoryResultVisible = false);
+                return;
+            }
+            IsSaveHistoryResultVisible = false;
+        }
+
+        /// <summary>删除一条历史记录（是否二次确认由调用方决定）。</summary>
+        public void DeleteHistory(HistoryRecord? record)
+        {
+            if (record is null) return;
+            HistoryRecords.Remove(record);
+            SelectedHistory = HistoryRecords.FirstOrDefault();
+            PersistHistory();
+        }
+
+        private void PersistHistory()
+        {
+            _history.Records = HistoryRecords.ToList();
+            _history.Save();
         }
         #endregion
 

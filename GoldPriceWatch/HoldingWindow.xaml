@@ -90,9 +90,10 @@
 
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="600" MinWidth="460" MaxWidth="820"/>
-            <ColumnDefinition Width="6"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition x:Name="LeftColumn" Width="600" MinWidth="460" MaxWidth="820"/>
+            <ColumnDefinition x:Name="SplitterColumn" Width="6"/>
+            <ColumnDefinition Width="16"/>
+            <ColumnDefinition x:Name="RightColumn" Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- ═══════════ 左侧：TabControl 分区 ═══════════ -->
@@ -114,6 +115,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <!-- 标签与控件共用一个 Grid，列宽只计算一次，保证列首对齐 -->
                             <Grid Margin="0,0,0,8">
@@ -223,6 +225,19 @@
                                     </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
+
+                            <!-- 操作按钮：靠右，位于交易记录下方 -->
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                <TextBlock Text="{Binding SaveHistoryResultText}"
+                                           Visibility="{Binding IsSaveHistoryResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                           Foreground="#FF2EB86E" FontSize="12"
+                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <Button Content="存为历史记录" Style="{StaticResource GoldButton}"
+                                        Command="{Binding SaveCurrentAsHistoryCommand}"/>
+                                <Button Content="清空" Margin="10,0,0,0" FontSize="13"
+                                        Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
+                                        Padding="14,6" Cursor="Hand" Click="ClearOrders_Click"/>
+                            </StackPanel>
                         </Grid>
                     </GroupBox>
 
@@ -358,13 +373,143 @@
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
+
+            <!-- ── Tab 3: 历史记录 ── -->
+            <TabItem Header="历史记录" Style="{StaticResource TabBarItemStyle}">
+                <Grid Margin="4,10,4,4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <GroupBox Grid.Row="0" Header="历史快照" Style="{StaticResource GroupStyle}" Margin="0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <DataGrid ItemsSource="{Binding HistoryRecords}"
+                                      SelectedItem="{Binding SelectedHistory}"
+                                      AutoGenerateColumns="False" CanUserAddRows="False"
+                                      IsReadOnly="True" HeadersVisibility="Column" RowHeight="30"
+                                      Background="White" Foreground="#FF2B2B33"
+                                      BorderBrush="#FFD8D8E0" RowBackground="White" AlternatingRowBackground="#FFF6F6F8"
+                                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#FFE8E8EE"
+                                      SelectionMode="Single" FontSize="12"
+                                      MouseDoubleClick="OpenHistory_MouseDoubleClick"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      EnableRowVirtualization="True">
+                                <DataGrid.Resources>
+                                    <Style x:Key="HistoryCellStyle" TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#FF8A2A2A"/>
+                                        <Setter Property="Padding" Value="4,0"/>
+                                    </Style>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="DataGridCell">
+                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            SnapsToDevicePixels="True">
+                                                        <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#FFFFF3D6"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#FFE0A83E"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                    <Style TargetType="DataGridRow">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#FFFFF3D6"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.Resources>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" MinWidth="130"
+                                                        ElementStyle="{StaticResource HistoryCellStyle}"/>
+                                    <DataGridTextColumn Header="保存时间" Binding="{Binding CreatedAtText}" Width="Auto" MinWidth="130"
+                                                        ElementStyle="{StaticResource HistoryCellStyle}"/>
+                                    <DataGridTextColumn Header="金价" Binding="{Binding CurrentPrice, StringFormat=F2}" Width="Auto" MinWidth="60"
+                                                        ElementStyle="{StaticResource HistoryCellStyle}"/>
+                                    <DataGridTextColumn Header="持仓 (g)" Binding="{Binding Summary.RemainingWeight, StringFormat=F4}"
+                                                        Width="Auto" MinWidth="70"
+                                                        ElementStyle="{StaticResource HistoryCellStyle}"/>
+                                    <DataGridTextColumn Header="浮盈" Binding="{Binding Summary.FloatingProfit, StringFormat=F2}"
+                                                        Width="Auto" MinWidth="70">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground"
+                                                        Value="{Binding Summary.FloatingProfit, Converter={StaticResource ProfitColor}}"/>
+                                                <Setter Property="Padding" Value="4,0"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="已实现盈亏" Binding="{Binding Summary.NetProfit, StringFormat=F2}"
+                                                        Width="Auto" MinWidth="90">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground"
+                                                        Value="{Binding Summary.NetProfit, Converter={StaticResource ProfitColor}}"/>
+                                                <Setter Property="Padding" Value="4,0"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="流水" Binding="{Binding OrderCount}" Width="Auto" MinWidth="50"
+                                                        ElementStyle="{StaticResource HistoryCellStyle}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <Grid Grid.Row="1" Margin="4,6,0,0">
+                                <TextBlock Text="双击一条记录可查看详情" Foreground="#FF8A8A95" FontSize="11"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="查看详情" Style="{StaticResource GoldButton}" Background="#FFF1E4C2"
+                                            Click="OpenHistory_Click"/>
+                                    <Button Content="删除" Margin="10,0,0,0" FontSize="13"
+                                            Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
+                                            Padding="14,6" Cursor="Hand" Click="DeleteHistory_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
         </TabControl>
 
-        <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+        <GridSplitter x:Name="Splitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
                       Background="Transparent" ResizeBehavior="PreviousAndNext"/>
 
+        <!-- ═══════════ 竖状收起按钮：切换右侧面板显示/隐藏 ═══════════ -->
+        <Button x:Name="ToggleRightButton" Grid.Column="2" Width="16" Margin="2,0"
+                VerticalAlignment="Stretch" HorizontalAlignment="Center"
+                Cursor="Hand" BorderThickness="0" Background="#FFEDEDF2"
+                Foreground="#FF8A8A95" FontSize="16" FontWeight="SemiBold" Content="›"
+                ToolTip="收起右侧面板" Click="ToggleRight_Click">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="3">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#FFF6E8C8"/>
+                            <Setter Property="Foreground" Value="#FFB8860B"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+
         <!-- ═══════════ 右侧：统计卡片 + 大图表 ═══════════ -->
-        <Grid Grid.Column="2">
+        <Grid x:Name="RightPanel" Grid.Column="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
