@@ -21,8 +21,11 @@ namespace GoldPriceWatch
         /// <summary>右侧面板是否处于收起状态。</summary>
         private bool _rightCollapsed;
 
-        /// <summary>收起时右栏（含分割条）的宽度，用于展开时把窗口还原。</summary>
-        private double _rightPanelWidth;
+        /// <summary>展开状态下的窗口总宽度（收起前保存，展开时直接恢复）。</summary>
+        private double _expandedWindowWidth;
+
+        /// <summary>收起状态下的窗口总宽度（展开前保存，收起时直接恢复）。</summary>
+        private double _collapsedWindowWidth;
 
         /// <summary>展开状态下的窗口最小宽度（收起时需临时放宽）。</summary>
         private double _expandedMinWidth;
@@ -109,36 +112,65 @@ namespace GoldPriceWatch
         {
             var changed = _rightCollapsed != collapsed;
 
-            // 记录收起前的左栏宽度与右栏实宽，用于展开时原样还原
-            if (changed && collapsed)
+            if (changed)
             {
-                _expandedLeftWidth = LeftColumn.Width;
-                _rightPanelWidth = RightPanel.ActualWidth + SplitterColumn.ActualWidth;
+                if (collapsed)
+                {
+                    // 即将从展开→收起：保存展开状态的关键尺寸
+                    _expandedLeftWidth = LeftColumn.Width;
+                    _expandedWindowWidth = Width;
+                }
+                else
+                {
+                    // 即将从收起→展开：保存收起状态的窗口宽度，供下次收起时还原
+                    _collapsedWindowWidth = Width;
+                }
             }
 
             _rightCollapsed = collapsed;
+
+            // ═══════════════════════════════════════════════════════════════
+            // 彻底隔离 GridSplitter：ResizeBehavior="PreviousAndNext" 在任何布局
+            // 变化时都可能插手重分配左右列宽。单靠设 SplitterColumn=0 不足以让它
+            // "失明"——它作为控件仍参与 WPF 布局协调。必须用 Visibility=Collapsed
+            // 把它从可视树中彻底移除，整个切换过程它都完全不存在。
+            // ═══════════════════════════════════════════════════════════════
+            Splitter.Visibility = Visibility.Collapsed;
+            SplitterColumn.Width = new GridLength(0);
+
             RightPanel.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
             RightColumn.Width = collapsed ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-            SplitterColumn.Width = collapsed ? new GridLength(0) : new GridLength(6);
 
             // 收起后左栏铺满整个窗口，展开后还原原宽度与上限
             LeftColumn.Width = collapsed ? new GridLength(1, GridUnitType.Star) : _expandedLeftWidth;
             LeftColumn.MaxWidth = collapsed ? double.PositiveInfinity : 820;
 
-            // 窗体宽度跟随右栏一起收窄/展开（状态未变化时不重复调整，避免多次 Loaded 叠减）
+            // 窗体宽度调整（GridSplitter 已彻底消失，无法干扰）
             if (changed)
             {
                 if (collapsed)
                 {
                     MinWidth = CollapsedMinWidth;
-                    Width = Math.Max(MinWidth, Width - _rightPanelWidth);
+                    Width = _collapsedWindowWidth > 0
+                        ? Math.Max(MinWidth, _collapsedWindowWidth)
+                        : CollapsedMinWidth;
                 }
                 else
                 {
                     MinWidth = _expandedMinWidth;
-                    Width = Math.Max(MinWidth, Width + _rightPanelWidth);
+                    Width = _expandedWindowWidth > 0
+                        ? Math.Max(MinWidth, _expandedWindowWidth)
+                        : Math.Max(MinWidth, Width);
                 }
             }
+
+            // ═══ 所有属性已设置完毕，等布局引擎处理完当前这一轮后 ═══
+            // 再恢复 GridSplitter，确保它看到的是已经稳定的 LeftColumn 宽度
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                SplitterColumn.Width = collapsed ? new GridLength(0) : new GridLength(6);
+                Splitter.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
 
             ToggleRightButton.Content = collapsed ? "‹" : "›";
             ToggleRightButton.ToolTip = collapsed ? "展开右侧面板" : "收起右侧面板";

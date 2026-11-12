@@ -420,7 +420,11 @@ namespace GoldPriceWatch.Model
                 var root = document.RootElement;
 
                 // 手动设置属性
-                if (root.TryGetProperty("purchasePrice", out var prop))
+                if (root.TryGetProperty("showNotice", out var prop))
+                {
+                    ShowNotice = prop.GetBoolean();
+                }
+                if (root.TryGetProperty("purchasePrice", out prop))
                 {
                     PurchasePrice = prop.GetDecimal();
                 }
@@ -483,6 +487,10 @@ namespace GoldPriceWatch.Model
                 if (root.TryGetProperty("refreshIntervalSeconds", out prop))
                 {
                     RefreshIntervalSeconds = prop.GetInt32();
+                }
+                if (root.TryGetProperty("floatingOpacity", out prop))
+                {
+                    FloatingOpacity = prop.GetDouble();
                 }
             }
             catch (Exception ex)
