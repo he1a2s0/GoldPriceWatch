@@ -13,8 +13,8 @@ namespace GoldPriceWatch.Core
 {
     public class RequestCloud
     {
-        private static readonly IGoldPriceFetcher[] _platforms = [new cmbchinaFetcher(), new guojijinjiaFetcher(), new huilvbiaoFetcher()];
-        private static int _currentIndex = 0;
+        // 按优先级排列：浙商银行积存金报价优先，其余仅作为其离线时的兜底
+        private static readonly IGoldPriceFetcher[] _platforms = [new zheshangFetcher(), new cmbchinaFetcher(), new guojijinjiaFetcher(), new huilvbiaoFetcher()];
 
         // 每个 platform 下线后，至少等待此时长再做健康检查
         private static readonly TimeSpan _recoveryInterval = TimeSpan.FromMinutes(2);
@@ -28,26 +28,21 @@ namespace GoldPriceWatch.Core
 
         public static async Task<GoldResult> GetGoldPrice()
         {
-            // 从当前索引开始，找到第一个在线的 platform
+            // 按优先级依次尝试，找到第一个在线的 platform
             for (int i = 0; i < _platforms.Length; i++)
             {
-                int idx = (_currentIndex + i) % _platforms.Length;
-
-                if (!_health[idx].IsOnline)
+                if (!_health[i].IsOnline)
                     continue;
-
-                // 找到可用 platform，推进索引到下一个位置
-                _currentIndex = (idx + 1) % _platforms.Length;
 
                 GoldResult? result = null;
                 try
                 {
-                    result = await _platforms[idx].FetchCurrentPriceAsync();
+                    result = await _platforms[i].FetchCurrentPriceAsync();
                 }
                 catch
                 {
                     // 请求异常，标记下线
-                    _health[idx].MarkOffline();
+                    _health[i].MarkOffline();
                     continue;
                 }
 
@@ -56,11 +51,11 @@ namespace GoldPriceWatch.Core
                     !decimal.TryParse(result.CurrentPrice, out decimal price) ||
                     price == 0)
                 {
-                    _health[idx].MarkOffline();
+                    _health[i].MarkOffline();
                     continue;
                 }
 
-                _health[idx].MarkOnline();
+                _health[i].MarkOnline();
                 return result;
             }
 
