@@ -247,7 +247,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <TextBlock Text="克数修正 (克)" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBox Width="80" Style="{StaticResource InputStyle}"
-                                         Text="{Binding WeightCorrection, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                         Text="{Binding WeightCorrectionText, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBlock Text="  其值会额外加到当前持仓量上" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">

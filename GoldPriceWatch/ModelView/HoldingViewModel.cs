@@ -64,6 +64,7 @@ namespace GoldPriceWatch.ModelView
 
             feeRatePercent = _store.FeeRatePercent;
             weightCorrection = _store.WeightCorrection;
+            weightCorrectionText = _store.WeightCorrection.ToString(CultureInfo.CurrentCulture);
             alertEnabled = _store.AlertEnabled;
             alertHighPrice = _store.AlertHighPrice;
             alertLowPrice = _store.AlertLowPrice;
@@ -238,6 +239,30 @@ namespace GoldPriceWatch.ModelView
             Persist();
             Recalculate();
             _store.NotifyOrdersChanged();
+        }
+
+        /// <summary>
+        /// 克数修正的输入文本。用字符串承载输入，避免 decimal 直接绑定时 "-"、"1." 等
+        /// 输入中间态转换失败，保证小数与负数可自由录入。
+        /// </summary>
+        [ObservableProperty]
+        private string weightCorrectionText = "0";
+
+        partial void OnWeightCorrectionTextChanged(string value)
+        {
+            // 清空视为不修正
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                WeightCorrection = 0m;
+                return;
+            }
+
+            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.CurrentCulture, out var v) ||
+                decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out v))
+            {
+                WeightCorrection = v;
+            }
+            // "-"、"-1." 等中间态解析不出新值时保持原数值与原文本，等待继续输入
         }
 
         [ObservableProperty]

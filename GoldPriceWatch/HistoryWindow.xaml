@@ -68,6 +68,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <TextBlock Text="记录名称" Foreground="#FF6E6E78" Margin="0,0,10,6"/>
                     <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,20,6"/>
@@ -77,6 +78,8 @@
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FeeRatePercent, StringFormat=F2}"/>
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="保存时金价" Foreground="#FF6E6E78" Margin="0,0,10,0"/>
                     <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding CurrentPrice, StringFormat=F2}"/>
+                    <TextBlock Grid.Row="2" Text="克数修正 (克)" Foreground="#FF6E6E78" Margin="0,6,10,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding WeightCorrection, StringFormat=F4}" Margin="0,6,0,0"/>
                 </Grid>
             </GroupBox>
 
