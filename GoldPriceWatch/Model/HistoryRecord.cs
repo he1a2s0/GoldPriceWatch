@@ -19,6 +19,9 @@ namespace GoldPriceWatch.Model
         /// <summary>卖出费率（百分比）。</summary>
         public decimal FeeRatePercent { get; set; }
 
+        /// <summary>克数修正（克）：额外加到持仓量上，可为负数。</summary>
+        public decimal WeightCorrection { get; set; }
+
         /// <summary>保存时的实时金价（元/克）。</summary>
         public decimal CurrentPrice { get; set; }
 
@@ -42,18 +45,19 @@ namespace GoldPriceWatch.Model
         {
             var feeRate = FeeRatePercent / 100m;
             var profit = TradingCalculator.CalculateRealizedProfit(Orders, feeRate);
+            var remainingWeight = profit.RemainingWeight + WeightCorrection;
             var summary = new HistorySummary
             {
                 FeeRate = feeRate,
-                RemainingWeight = profit.RemainingWeight,
+                RemainingWeight = remainingWeight,
                 RemainingCost = profit.RemainingCost,
                 NetProfit = profit.NetProfit,
-                AvgCostPrice = profit.RemainingWeight > 0 ? profit.RemainingCost / profit.RemainingWeight : 0m,
+                AvgCostPrice = remainingWeight > 0 ? profit.RemainingCost / remainingWeight : 0m,
                 BreakEvenPrice = TradingCalculator.CalculateBreakEvenPrice(
-                    profit.RemainingCost, profit.RemainingWeight, feeRate)
+                    profit.RemainingCost, remainingWeight, feeRate)
             };
 
-            summary.MarketValue = CurrentPrice * profit.RemainingWeight;
+            summary.MarketValue = CurrentPrice * remainingWeight;
             summary.FloatingProfit = summary.MarketValue * (1 - feeRate) - profit.RemainingCost;
             summary.FloatingProfitPercent = profit.RemainingCost > 0
                 ? summary.FloatingProfit / profit.RemainingCost * 100m

@@ -31,6 +31,9 @@ namespace GoldPriceWatch.Core
         /// <summary>卖出费率（百分比，默认 0.4%）。</summary>
         public decimal FeeRatePercent { get; set; } = 0.4m;
 
+        /// <summary>克数修正（克）：额外加到当前持仓量上，可为负数。</summary>
+        public decimal WeightCorrection { get; set; }
+
         public bool AlertEnabled { get; set; } = true;
 
         /// <summary>高价提醒线（0 表示不启用）。</summary>

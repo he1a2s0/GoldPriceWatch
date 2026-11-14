@@ -63,6 +63,7 @@ namespace GoldPriceWatch.ModelView
                 _history.Records.OrderByDescending(r => r.CreatedAt));
 
             feeRatePercent = _store.FeeRatePercent;
+            weightCorrection = _store.WeightCorrection;
             alertEnabled = _store.AlertEnabled;
             alertHighPrice = _store.AlertHighPrice;
             alertLowPrice = _store.AlertLowPrice;
@@ -161,6 +162,7 @@ namespace GoldPriceWatch.ModelView
                 Name = now.ToString("yyyy-MM-dd_HHmmss"),
                 CreatedAt = now,
                 FeeRatePercent = FeeRatePercent,
+                WeightCorrection = WeightCorrection,
                 CurrentPrice = CurrentPrice,
                 Orders = Orders.Select(o => new OrderRecord
                 {
@@ -221,6 +223,17 @@ namespace GoldPriceWatch.ModelView
         private decimal feeRatePercent;
 
         partial void OnFeeRatePercentChanged(decimal value)
+        {
+            Persist();
+            Recalculate();
+            _store.NotifyOrdersChanged();
+        }
+
+        /// <summary>克数修正（克）：额外加到当前持仓量上，可为负数。</summary>
+        [ObservableProperty]
+        private decimal weightCorrection;
+
+        partial void OnWeightCorrectionChanged(decimal value)
         {
             Persist();
             Recalculate();
@@ -384,11 +397,13 @@ namespace GoldPriceWatch.ModelView
         private void Recalculate()
         {
             var profit = TradingCalculator.CalculateRealizedProfit(Orders, FeeRate);
-            RemainingWeight = profit.RemainingWeight;
+            // 克数修正额外叠加在流水计算出的持仓量上，成本不变
+            var remainingWeight = profit.RemainingWeight + WeightCorrection;
+            RemainingWeight = remainingWeight;
             RemainingCost = profit.RemainingCost;
             NetProfit = profit.NetProfit;
-            AvgCostPrice = profit.RemainingWeight > 0 ? profit.RemainingCost / profit.RemainingWeight : 0m;
-            BreakEvenPrice = TradingCalculator.CalculateBreakEvenPrice(profit.RemainingCost, profit.RemainingWeight, FeeRate);
+            AvgCostPrice = remainingWeight > 0 ? profit.RemainingCost / remainingWeight : 0m;
+            BreakEvenPrice = TradingCalculator.CalculateBreakEvenPrice(profit.RemainingCost, remainingWeight, FeeRate);
 
             MarketValue = CurrentPrice * RemainingWeight;
             FloatingProfit = MarketValue * (1 - FeeRate) - RemainingCost;
@@ -470,6 +485,7 @@ namespace GoldPriceWatch.ModelView
             _store.Orders = Orders.ToList();
             _store.PriceHistory = PriceHistory.ToList();
             _store.FeeRatePercent = FeeRatePercent;
+            _store.WeightCorrection = WeightCorrection;
             _store.AlertEnabled = AlertEnabled;
             _store.AlertHighPrice = AlertHighPrice;
             _store.AlertLowPrice = AlertLowPrice;

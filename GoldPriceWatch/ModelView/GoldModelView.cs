@@ -79,17 +79,20 @@ namespace GoldPriceWatch.ModelView
         /// <summary>
         /// 基于订单的持仓：均价、剩余克数、剩余成本。
         /// 与持仓监控窗口共用同一套订单数据与算法（TradingCalculator），保证两处口径一致；
-        /// 无订单时为 0 持仓，不再回退到 config 的旧固定值（那会与持仓监控显示不一致）。
+        /// 克数修正额外叠加在持仓量上；两者都为 0 时显示 0 持仓。
         /// </summary>
         private (decimal AvgPrice, decimal Grams, decimal Cost) GetHolding()
         {
-            if (_store.Orders == null || _store.Orders.Count == 0) return (0m, 0m, 0m);
+            var orders = _store.Orders;
+            if ((orders == null || orders.Count == 0) && _store.WeightCorrection == 0m) return (0m, 0m, 0m);
 
             var feeRate = _store.FeeRatePercent / 100m;
-            var p = TradingCalculator.CalculateRealizedProfit(_store.Orders, feeRate);
+            var p = TradingCalculator.CalculateRealizedProfit(orders ?? new List<OrderRecord>(), feeRate);
 
-            var avg = p.RemainingWeight > 0 ? p.RemainingCost / p.RemainingWeight : 0m;
-            return (avg, p.RemainingWeight, p.RemainingCost);
+            // 与持仓监控窗口一致：克数修正额外叠加在持仓量上，成本不变
+            var grams = p.RemainingWeight + _store.WeightCorrection;
+            var avg = grams > 0 ? p.RemainingCost / grams : 0m;
+            return (avg, grams, p.RemainingCost);
         }
 
         /// <summary>

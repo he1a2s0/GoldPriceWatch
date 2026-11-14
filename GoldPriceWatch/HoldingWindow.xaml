@@ -241,13 +241,21 @@
                         </Grid>
                     </GroupBox>
 
-                    <!-- 费率设置（固定在底部） -->
-                    <GroupBox Grid.Row="1" Header="费率设置" Style="{StaticResource GroupStyle}" Margin="0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="卖出费率 (%)" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBox Width="80" Style="{StaticResource InputStyle}"
-                                     Text="{Binding FeeRatePercent, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
-                            <TextBlock Text="  买入免手续费，卖出按成交金额收取" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
+                    <!-- 其它设置（固定在底部） -->
+                    <GroupBox Grid.Row="1" Header="其它设置" Style="{StaticResource GroupStyle}" Margin="0">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="克数修正 (克)" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox Width="80" Style="{StaticResource InputStyle}"
+                                         Text="{Binding WeightCorrection, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                <TextBlock Text="  其值会额外加到当前持仓量上" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="卖出费率 (%)" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox Width="80" Style="{StaticResource InputStyle}"
+                                         Text="{Binding FeeRatePercent, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
+                                <TextBlock Text="  买入免手续费，卖出按成交金额收取" Foreground="#FF8A8A95" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </StackPanel>
                     </GroupBox>
                 </Grid>
