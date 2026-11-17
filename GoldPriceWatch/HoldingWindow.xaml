@@ -255,18 +255,37 @@
                                 </DataGrid.Columns>
                             </DataGrid>
 
-                            <!-- 操作按钮：靠右，位于交易记录下方 -->
-                            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                                <TextBlock Text="{Binding SaveHistoryResultText}"
-                                           Visibility="{Binding IsSaveHistoryResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                           Foreground="#FF2EB86E" FontSize="12"
-                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <Button Content="存为历史记录" Style="{StaticResource GoldButton}"
-                                        Command="{Binding SaveCurrentAsHistoryCommand}"/>
-                                <Button Content="清空" Margin="10,0,0,0" FontSize="13"
-                                        Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
-                                        Padding="14,6" Cursor="Hand" Click="ClearOrders_Click"/>
-                            </StackPanel>
+                            <!-- 持仓摘要：第一行展示持仓，第二行展示市值与浮动盈亏；操作按钮靠右 -->
+                            <Grid Grid.Row="3" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock FontSize="11" TextTrimming="CharacterEllipsis">
+                                        <Run Text="持仓量："/><Run Text="{Binding RemainingWeight, StringFormat=F4}"/><Run Text=" 克"/>
+                                        <Run Text="    持仓均价："/><Run Text="{Binding AvgCostPrice, StringFormat=F2}"/>
+                                        <Run Text="    持仓成本："/><Run Text="{Binding RemainingCost, StringFormat=F2}"/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis">
+                                        <Run Text="当前市值："/><Run Text="{Binding MarketValue, StringFormat=F2}"/>
+                                        <Run Text="    浮动盈亏："/>
+                                        <Run Text="{Binding FloatingProfit, StringFormat=F2}"
+                                             Foreground="{Binding FloatingProfit, Converter={StaticResource ProfitColor}}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SaveHistoryResultText}"
+                                               Visibility="{Binding IsSaveHistoryResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                               Foreground="#FF2EB86E" FontSize="12"
+                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <Button Content="存为历史记录" Style="{StaticResource GoldButton}"
+                                            Command="{Binding SaveCurrentAsHistoryCommand}"/>
+                                    <Button Content="清空..." Margin="10,0,0,0" FontSize="13"
+                                            Background="#FFF3DCDC" Foreground="#FF8A2A2A" BorderThickness="0"
+                                            Padding="14,6" Cursor="Hand" Click="ClearOrders_Click"/>
+                                </StackPanel>
+                            </Grid>
                         </Grid>
                     </GroupBox>
 
