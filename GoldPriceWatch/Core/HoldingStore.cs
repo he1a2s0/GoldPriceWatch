@@ -8,8 +8,9 @@ using GoldPriceWatch.Model;
 namespace GoldPriceWatch.Core
 {
     /// <summary>
-    /// 持仓监控数据持久化：买卖流水、费率、提醒阈值、价格历史。
+    /// 持仓监控数据持久化：买卖流水、费率、提醒阈值。
     /// 存储于 %LocalAppData%\GoldPriceWatch\holding.json。
+    /// 价格历史已迁至 SQLite（见 PriceHistoryDatabase），此处的 PriceHistory 仅用于旧数据迁移。
     /// </summary>
     public class HoldingStore
     {
@@ -42,6 +43,7 @@ namespace GoldPriceWatch.Core
         /// <summary>低价提醒线（0 表示不启用）。</summary>
         public decimal AlertLowPrice { get; set; }
 
+        /// <summary>旧版保存在 holding.json 中的价格历史；迁移进数据库后清空，不再写入。</summary>
         public List<PricePoint> PriceHistory { get; set; } = new();
 
         /// <summary>右侧统计/图表面板是否已收起（记住上次的显示状态）。</summary>
@@ -167,9 +169,6 @@ namespace GoldPriceWatch.Core
             try
             {
                 Directory.CreateDirectory(DataDir);
-                // 仅保留最近 3 天的价格历史，避免文件无限增长
-                var cutoff = DateTime.Now.AddDays(-3);
-                PriceHistory = PriceHistory.Where(p => p.Time >= cutoff).ToList();
                 File.WriteAllText(DataFile, JsonSerializer.Serialize(this, JsonOptions));
             }
             catch (Exception)

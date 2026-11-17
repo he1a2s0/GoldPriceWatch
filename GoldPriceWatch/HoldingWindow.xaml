@@ -86,6 +86,35 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- 图表时间区间切换按钮 -->
+        <Style x:Key="RangeItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="#FF6E6E78"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Margin" Value="0,0,4,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFF6E8C8"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFE0A83E"/>
+                                <Setter Property="Foreground" Value="#FF3B2E10"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="12">
@@ -553,6 +582,14 @@
                 </Border>
                 <Border Style="{StaticResource StatCard}">
                     <StackPanel>
+                        <TextBlock Text="国际金价 (美元/盎司)" Style="{StaticResource StatLabel}"/>
+                        <TextBlock Text="{Binding InternationalPriceText}" Style="{StaticResource StatValue}"
+                                   FontSize="20" Foreground="#FF1E88E5"/>
+                        <TextBlock Text="伦敦金现货" Style="{StaticResource StatLabel}" FontSize="11"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource StatCard}">
+                    <StackPanel>
                         <TextBlock Text="持仓均价 (元/克)" Style="{StaticResource StatLabel}"/>
                         <TextBlock Text="{Binding AvgCostPrice, StringFormat=F2}" Style="{StaticResource StatValue}"/>
                         <TextBlock FontSize="13" Foreground="#FF8A8A95" Margin="0,4,0,0">
@@ -599,8 +636,27 @@
 
             <!-- 价格走势图表（占据剩余全部空间） -->
             <GroupBox Grid.Row="1" Header="价格走势" Style="{StaticResource GroupStyle}" Margin="4,0,0,0" Padding="6">
-                <controls:PriceChartControl ItemsSource="{Binding PriceHistory}"
-                                            BreakEvenPrice="{Binding BreakEvenPrice}"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <ListBox Grid.Row="0" ItemsSource="{Binding ChartRanges}"
+                             SelectedValue="{Binding ChartRange}" SelectedValuePath="Value"
+                             DisplayMemberPath="Title" ItemContainerStyle="{StaticResource RangeItemStyle}"
+                             Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,6"
+                             HorizontalAlignment="Left"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                    </ListBox>
+                    <controls:PriceChartControl Grid.Row="1" ItemsSource="{Binding ChartPoints}"
+                                                BreakEvenPrice="{Binding BreakEvenPrice}"/>
+                </Grid>
             </GroupBox>
         </Grid>
     </Grid>

@@ -1,5 +1,7 @@
 using GoldPriceWatch.Core;
 using GoldPriceWatch.Core.Background;
+using GoldPriceWatch.Core.Fetcher;
+using GoldPriceWatch.Core.Logging;
 using GoldPriceWatch.Model;
 using GoldPriceWatch.ModelView;
 using MediatR;
@@ -23,6 +25,8 @@ namespace GoldPriceWatch
         /// 单实例互斥量（Local\ 前缀：同一登录会话内唯一，多用户互不影响）
         /// </summary>
         private Mutex? _singleInstanceMutex;
+
+        private ILogger<App>? _logger;
 
         private const string SingleInstanceMutexName = @"Local\GoldPriceWatch.SingleInstance";
         /// <summary>
@@ -48,9 +52,13 @@ namespace GoldPriceWatch
             _host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
-                    // 注册日志
+                    // 注册日志：写入 %LocalAppData%\GoldPriceWatch\logs\app-yyyyMMdd.log（按天滚动，保留 7 天）
                     services.AddLogging(logging =>
-                        logging.AddConsole().SetMinimumLevel(LogLevel.Debug));
+                    {
+                        logging.ClearProviders();
+                        logging.AddProvider(new FileLoggerProvider());
+                        logging.SetMinimumLevel(LogLevel.Information);
+                    });
 
                     // 注册 MediatR
                     services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(App).Assembly));
@@ -58,6 +66,11 @@ namespace GoldPriceWatch
                     services.AddSingleton<GoldInvestmentConfig>(new GoldInvestmentConfig());
                     services.AddSingleton<GoldPriceWatch.Core.HoldingStore>(GoldPriceWatch.Core.HoldingStore.Load());
                     services.AddSingleton<GoldPriceWatch.Core.HistoryStore>(GoldPriceWatch.Core.HistoryStore.Load());
+                    // 价格历史数据库（SQLite）
+                    services.AddSingleton<GoldPriceWatch.Core.PriceHistoryDatabase>();
+                    // 取价器（国际金价、历史日线）
+                    services.AddSingleton<InternationalGoldFetcher>();
+                    services.AddSingleton<HistoricalGoldFetcher>();
                     services.AddSingleton<GoldModelView>();
                     services.AddSingleton<INotificationHandler<GoldResult>>(provide => provide.GetRequiredService<GoldModelView>());
                     services.AddSingleton<INotificationHandler<FetchStatusChanged>>(provide => provide.GetRequiredService<GoldModelView>());
@@ -73,6 +86,8 @@ namespace GoldPriceWatch
                     // 注册后台服务：同时注册具体类型，供“立即刷新”通过 DI 直接调用
                     services.AddSingleton<LoopFetcherService>();
                     services.AddHostedService(sp => sp.GetRequiredService<LoopFetcherService>());
+                    // 首次启动时用最近 3 年的日线历史初始化数据库
+                    services.AddHostedService<HistoryBackfillService>();
                 })
                 .Build();
         }
@@ -97,6 +112,9 @@ namespace GoldPriceWatch
                 // 启动主机，运行所有托管服务
                 await _host.StartAsync();
 
+                _logger = _host.Services.GetRequiredService<ILogger<App>>();
+                _logger.LogInformation("应用启动，版本 {Version}", GetType().Assembly.GetName().Version);
+
                 // 显示悬浮框
                 var mainWindow = _host.Services.GetRequiredService<MainWindow>();
                 mainWindow.Show();
@@ -106,6 +124,7 @@ namespace GoldPriceWatch
             }
             catch (Exception ex)
             {
+                _logger?.LogError(ex, "应用启动失败");
                 MessageBox.Show($"Startup error: {ex.Message}");
                 Shutdown();
             }
@@ -113,6 +132,8 @@ namespace GoldPriceWatch
 
         protected override void OnExit(ExitEventArgs e)
         {
+            _logger?.LogInformation("应用退出");
+            _logger = null;
             _singleInstanceMutex?.Dispose();
             base.OnExit(e);
         }

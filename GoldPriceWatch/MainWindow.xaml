@@ -157,6 +157,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
             <!-- Top Row: Current Price & Trend -->
@@ -191,6 +192,14 @@
                 <TextBlock Text="/ " />
                 <TextBlock Text="{Binding PurchaseTotalValue}" Style="{StaticResource InfoTextStyle}" Margin="0,0,8,0"/>
             </StackPanel>
+
+            <!-- International gold price (USD/oz) -->
+            <TextBlock Grid.Row="3" Style="{StaticResource InfoTextStyle}" HorizontalAlignment="Center"
+                       Margin="0,1,0,0">
+                <Run Text="国际 "/>
+                <Run Text="{Binding InternationalPriceText}"/>
+                <Run Text=" 美元/盎司"/>
+            </TextBlock>
         </Grid>
 
         <Border.ContextMenu>

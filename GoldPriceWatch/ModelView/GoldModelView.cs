@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,6 +40,10 @@ namespace GoldPriceWatch.ModelView
 
         [ObservableProperty]
         private string? currentPriceText;
+
+        /// <summary>国际金价（美元/盎司）显示文本，未取到时为 --。</summary>
+        [ObservableProperty]
+        private string internationalPriceText = "--";
 
         [ObservableProperty]
         private string? purchasePriceText;
@@ -136,6 +141,11 @@ namespace GoldPriceWatch.ModelView
 
             // Update basic price info
             CurrentPriceText = $"{notification.CurrentPrice}";
+            if (decimal.TryParse(notification.InternationalPrice, NumberStyles.Any,
+                    CultureInfo.InvariantCulture, out var intlPrice) && intlPrice > 0)
+            {
+                InternationalPriceText = intlPrice.ToString("F2");
+            }
             UpdateHoldingDisplay(notification);
 
             // Update trend

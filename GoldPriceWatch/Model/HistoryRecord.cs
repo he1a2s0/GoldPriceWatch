@@ -25,6 +25,9 @@ namespace GoldPriceWatch.Model
         /// <summary>保存时的实时金价（元/克）。</summary>
         public decimal CurrentPrice { get; set; }
 
+        /// <summary>保存时的国际金价（美元/盎司），0 表示未取到。</summary>
+        public decimal InternationalPrice { get; set; }
+
         public List<OrderRecord> Orders { get; set; } = new();
 
         public List<PricePoint> PriceHistory { get; set; } = new();

@@ -20,6 +20,10 @@ namespace GoldPriceWatch.Model
         public string? OpenPrice { get; set; }      // 开盘价
         public string? SettlementPrice { get; set; } // 结算价
 
+        // 国际金价（与当前接口的金价同时采集）
+        public string? InternationalPrice { get; set; }  // 国际金价（美元/盎司）
+        public string? InternationalSource { get; set; } // 国际金价数据来源
+
         public GoldResult()
         {
             // 初始化默认值

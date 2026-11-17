@@ -23,13 +23,15 @@ namespace GoldPriceWatch.ModelView
 {
     /// <summary>
     /// 持仓监控视图模型：买卖流水、费率、持仓与浮盈、价格历史与阈值提醒。
-    /// 复用宿主既有取价管道（订阅 MediatR 的 GoldResult 通知），不额外发起网络请求。
+    /// 复用宿主既有取价管道（订阅 MediatR 的 GoldResult 通知），不额外发起网络请求；
+    /// 价格历史保存在 SQLite 中，按所选时间区间查询后交给图表绘制。
     /// </summary>
     public partial class HoldingViewModel : ObservableObject, INotificationHandler<GoldResult>
     {
         private readonly HoldingStore _store;
         private readonly GoldInvestmentConfig _config;
         private readonly HistoryStore _history;
+        private readonly PriceHistoryDatabase _db;
 
         // 提醒状态：越过阈值后置位，回到区间内复位，避免重复弹窗
         private bool _highAlertActive;
@@ -37,9 +39,31 @@ namespace GoldPriceWatch.ModelView
 
         public ObservableCollection<OrderRecord> Orders { get; }
 
-        public ObservableCollection<PricePoint> PriceHistory { get; }
+        /// <summary>图表当前时间区间内的价格点。</summary>
+        public ObservableCollection<PricePoint> ChartPoints { get; }
 
         public ObservableCollection<HistoryRecord> HistoryRecords { get; }
+
+        /// <summary>时间区间选项（实时 | 1天 | 3天 | ...）。</summary>
+        public IReadOnlyList<SelectedValue<ChartRange>> ChartRanges { get; } = new List<SelectedValue<ChartRange>>
+        {
+            new() { Title = "实时", Value = ChartRange.Realtime },
+            new() { Title = "1天", Value = ChartRange.Day1 },
+            new() { Title = "3天", Value = ChartRange.Day3 },
+            new() { Title = "1周", Value = ChartRange.Week1 },
+            new() { Title = "15天", Value = ChartRange.Day15 },
+            new() { Title = "1月", Value = ChartRange.Month1 },
+            new() { Title = "3月", Value = ChartRange.Month3 },
+            new() { Title = "半年", Value = ChartRange.HalfYear },
+            new() { Title = "1年", Value = ChartRange.Year1 },
+            new() { Title = "3年", Value = ChartRange.Year3 }
+        };
+
+        /// <summary>走势图时间区间，切换后从数据库重新载入。</summary>
+        [ObservableProperty]
+        private ChartRange chartRange = ChartRange.Realtime;
+
+        partial void OnChartRangeChanged(ChartRange value) => ReloadChart();
 
         [ObservableProperty]
         private HistoryRecord? selectedHistory;
@@ -57,10 +81,20 @@ namespace GoldPriceWatch.ModelView
             _store = App.Current.Services.GetRequiredService<HoldingStore>();
             _config = App.Current.Services.GetRequiredService<GoldInvestmentConfig>();
             _history = App.Current.Services.GetRequiredService<HistoryStore>();
+            _db = App.Current.Services.GetRequiredService<PriceHistoryDatabase>();
             Orders = new ObservableCollection<OrderRecord>(_store.Orders.OrderBy(o => o.Time));
-            PriceHistory = new ObservableCollection<PricePoint>(_store.PriceHistory.OrderBy(p => p.Time));
+            ChartPoints = new ObservableCollection<PricePoint>();
             HistoryRecords = new ObservableCollection<HistoryRecord>(
                 _history.Records.OrderByDescending(r => r.CreatedAt));
+
+            // 旧版价格历史曾存在 holding.json 里，迁移进数据库后清空，避免文件继续膨胀
+            if (_store.PriceHistory.Count > 0)
+            {
+                _db.Import(_store.PriceHistory);
+                _store.PriceHistory.Clear();
+                _store.Save();
+            }
+            ReloadChart();
 
             feeRatePercent = _store.FeeRatePercent;
             weightCorrection = _store.WeightCorrection;
@@ -165,6 +199,7 @@ namespace GoldPriceWatch.ModelView
                 FeeRatePercent = FeeRatePercent,
                 WeightCorrection = WeightCorrection,
                 CurrentPrice = CurrentPrice,
+                InternationalPrice = InternationalPrice,
                 Orders = Orders.Select(o => new OrderRecord
                 {
                     Id = o.Id,
@@ -174,7 +209,12 @@ namespace GoldPriceWatch.ModelView
                     Amount = o.Amount,
                     Time = o.Time
                 }).ToList(),
-                PriceHistory = PriceHistory.Select(p => new PricePoint { Time = p.Time, Price = p.Price }).ToList()
+                PriceHistory = ChartPoints.Select(p => new PricePoint
+                {
+                    Time = p.Time,
+                    Price = p.Price,
+                    InternationalPrice = p.InternationalPrice
+                }).ToList()
             };
 
             HistoryRecords.Insert(0, record);
@@ -377,6 +417,14 @@ namespace GoldPriceWatch.ModelView
         [ObservableProperty]
         private decimal currentPrice;
 
+        /// <summary>国际金价（美元/盎司），0 表示本次未取到。</summary>
+        [ObservableProperty]
+        private decimal internationalPrice;
+
+        /// <summary>国际金价的显示文本，取不到时显示 --。</summary>
+        [ObservableProperty]
+        private string internationalPriceText = "--";
+
         [ObservableProperty]
         private decimal highPrice;
 
@@ -462,17 +510,88 @@ namespace GoldPriceWatch.ModelView
             LastUpdateText = $"{DateTime.Now:HH:mm:ss} ({notification.Source})";
             StatusText = string.Empty;
 
-            var point = new PricePoint { Time = DateTime.Now, Price = price };
-            // 与最后一点间隔过近则覆盖，避免重复点
-            if (PriceHistory.Count > 0 && (point.Time - PriceHistory[^1].Time).TotalSeconds < 5)
-                PriceHistory[^1] = point;
-            else
-                PriceHistory.Add(point);
+            // 国际金价（美元/盎司）：取不到时保持上次的显示值，仅不计入图表点
+            decimal? international = decimal.TryParse(notification.InternationalPrice,
+                NumberStyles.Any, CultureInfo.InvariantCulture, out var intlValue) && intlValue > 0
+                ? intlValue
+                : null;
+            if (international.HasValue)
+            {
+                InternationalPrice = international.Value;
+                InternationalPriceText = international.Value.ToString("F2");
+            }
+
+            var point = new PricePoint { Time = DateTime.Now, Price = price, InternationalPrice = international };
+            _db.Add(point.Time, point.Price, point.InternationalPrice);
+            AppendChartPoint(point);
 
             Recalculate();
             CheckAlerts(price);
             Persist();
         }
+
+        /// <summary>把新价格点并入当前区间的曲线：同一桶内覆盖、超出窗口的旧点裁掉。</summary>
+        private void AppendChartPoint(PricePoint point)
+        {
+            var span = GetSpan(ChartRange);
+            var maxPoints = GetMaxPoints(ChartRange);
+            var bucket = TimeSpan.FromMilliseconds(Math.Max(1000, span.TotalMilliseconds / maxPoints));
+
+            if (ChartPoints.Count > 0)
+            {
+                var last = ChartPoints[^1];
+                if (point.Time - last.Time < bucket)
+                {
+                    // 同一时间桶：用最新价覆盖，本次没取到国际价时沿用上一段的值，避免曲线上断点
+                    ChartPoints[^1] = point.InternationalPrice == null && last.InternationalPrice != null
+                        ? new PricePoint { Time = point.Time, Price = point.Price, InternationalPrice = last.InternationalPrice }
+                        : point;
+                }
+                else
+                {
+                    ChartPoints.Add(point);
+                }
+            }
+            else
+            {
+                ChartPoints.Add(point);
+            }
+
+            var cutoff = point.Time - span;
+            while (ChartPoints.Count > 1 && ChartPoints[0].Time < cutoff)
+            {
+                ChartPoints.RemoveAt(0);
+            }
+        }
+
+        /// <summary>按所选区间从数据库重新载入走势数据。</summary>
+        private void ReloadChart()
+        {
+            var to = DateTime.Now;
+            var points = _db.Query(to - GetSpan(ChartRange), to, GetMaxPoints(ChartRange));
+
+            ChartPoints.Clear();
+            foreach (var point in points)
+            {
+                ChartPoints.Add(point);
+            }
+        }
+
+        private static TimeSpan GetSpan(ChartRange range) => range switch
+        {
+            ChartRange.Day1 => TimeSpan.FromDays(1),
+            ChartRange.Day3 => TimeSpan.FromDays(3),
+            ChartRange.Week1 => TimeSpan.FromDays(7),
+            ChartRange.Day15 => TimeSpan.FromDays(15),
+            ChartRange.Month1 => TimeSpan.FromDays(30),
+            ChartRange.Month3 => TimeSpan.FromDays(90),
+            ChartRange.HalfYear => TimeSpan.FromDays(182),
+            ChartRange.Year1 => TimeSpan.FromDays(365),
+            ChartRange.Year3 => TimeSpan.FromDays(1095),
+            _ => TimeSpan.FromHours(2) // 实时
+        };
+
+        private static int GetMaxPoints(ChartRange range) => range == ChartRange.Realtime ? 2000 : 1200;
 
         private static decimal ParseOrZero(string? text) =>
             decimal.TryParse(text, out var v) ? v : 0m;
@@ -508,7 +627,6 @@ namespace GoldPriceWatch.ModelView
         private void Persist()
         {
             _store.Orders = Orders.ToList();
-            _store.PriceHistory = PriceHistory.ToList();
             _store.FeeRatePercent = FeeRatePercent;
             _store.WeightCorrection = WeightCorrection;
             _store.AlertEnabled = AlertEnabled;
