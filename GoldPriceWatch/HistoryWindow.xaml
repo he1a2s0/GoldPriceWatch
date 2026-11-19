@@ -191,11 +191,11 @@
                 <Border Style="{StaticResource StatCard}" MinWidth="190">
                     <StackPanel>
                         <TextBlock Text="浮动盈亏 (元)" Style="{StaticResource StatLabel}"/>
-                        <TextBlock Style="{StaticResource StatValue}" FontSize="26"
-                                   Foreground="{Binding Summary.FloatingProfit, Converter={StaticResource ProfitColor}}">
-                            <Run Text="{Binding Summary.FloatingProfit, StringFormat=F2}"/>
-                            <Run FontSize="14" Text="{Binding Summary.FloatingProfitPercent, StringFormat=' ({0:F2}%)'}"/>
-                        </TextBlock>
+                        <TextBlock Text="{Binding Summary.FloatingProfit, StringFormat=F2}" Style="{StaticResource StatValue}"
+                                   Foreground="{Binding Summary.FloatingProfit, Converter={StaticResource ProfitColor}}"/>
+                        <TextBlock Text="{Binding Summary.FloatingProfitPercent, StringFormat='({0:F2}%)'}"
+                                   FontSize="12" Margin="0,2,0,0"
+                                   Foreground="{Binding Summary.FloatingProfit, Converter={StaticResource ProfitColor}}"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource StatCard}">
